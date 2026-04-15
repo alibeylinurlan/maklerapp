@@ -136,7 +136,7 @@ new class extends Component {
 
     <div class="flex items-center justify-between">
         <flux:heading size="xl">Elanlar</flux:heading>
-        <flux:badge>{{ $totalCount }} mülkiyyətçi elanı</flux:badge>
+        <!--<flux:badge>{{ $totalCount }} mülkiyyətçi elanı</flux:badge>-->
     </div>
 
     {{-- Filtrlər — bir sətirdə kompakt --}}
@@ -452,7 +452,7 @@ new class extends Component {
 
     {{-- RIGHT: live feed panel --}}
     <div class="w-72 shrink-0 sticky top-4 self-start rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
-         style="background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 60%, #064e3b 100%); height: calc(100vh - 7rem);">
+         style="background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 60%, #064e3b 100%); height: calc(100vh - 3rem);">
         @livewire('properties.live-feed')
     </div>
 
