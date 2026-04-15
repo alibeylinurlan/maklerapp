@@ -23,12 +23,14 @@ new class extends Component {
                 <span class="relative inline-flex size-2.5 rounded-full"
                       :class="connected ? 'bg-emerald-500' : 'bg-zinc-600'"></span>
             </span>
-            <span class="text-sm font-semibold text-white tracking-wide">Canlı axın</span>
+            <span class="text-sm font-semibold text-white tracking-wide">Canlı axın | Yeni elanlar</span>
         </div>
-        <span x-show="newCount > 0"
-              x-text="'+' + newCount + ' yeni'"
-              class="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.5 text-xs font-bold text-emerald-400">
-        </span>
+        @if(auth()->user()->hasAnyRole(['developer', 'superadmin', 'admin']))
+        <button @click="sendTest()"
+                class="rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30 transition-colors">
+            Test
+        </button>
+        @endif
     </div>
 
     {{-- Empty state --}}
@@ -42,10 +44,10 @@ new class extends Component {
     </div>
 
     {{-- Feed --}}
-    <div x-show="items.length > 0" class="flex-1 overflow-y-auto divide-y divide-white/5">
+    <div x-show="items.length > 0" class="flex-1 overflow-y-auto divide-y divide-white/5 p-2">
         <template x-for="item in items" :key="item.id">
             <a :href="item.url" target="_blank"
-               class="flex gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors group"
+               class="flex gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors group mb-2"
                x-bind:class="item.isNew ? 'feed-new' : ''">
 
                 <div class="shrink-0 size-12 overflow-hidden rounded-lg bg-white/10">
@@ -66,10 +68,10 @@ new class extends Component {
                     <div class="flex items-start justify-between gap-1">
                         <span class="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors"
                               x-text="item.price || 'Qiymət yox'"></span>
-                        <span x-show="item.isNew"
+                        <!--<span x-show="item.isNew"
                               class="shrink-0 rounded-sm bg-emerald-500/30 border border-emerald-500/40 px-1 py-0.5 text-[9px] font-bold uppercase tracking-widest text-emerald-400">
                             YENİ
-                        </span>
+                        </span>-->
                     </div>
 
                     <div class="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-white/50">
@@ -88,23 +90,54 @@ new class extends Component {
                     </div>
 
                     <div x-show="item.location" class="mt-0.5 truncate text-xs text-white/35" x-text="item.location"></div>
-                    <div class="mt-1 text-[10px] text-white/25" x-text="item.at"></div>
                 </div>
             </a>
         </template>
     </div>
 
-    {{-- Footer --}}
-    <div class="px-4 py-2 border-t border-white/10 text-center">
-        <span class="text-[10px] text-white/20 tracking-wide uppercase" x-text="connected ? 'Socket aktiv' : 'Qoşulur...'"></span>
-    </div>
 </div>
 
 <style>
-.feed-new { animation: feedIn 0.4s ease both; }
+.feed-new {
+    position: relative;
+    animation: feedIn 0.4s ease both;
+}
+
+.feed-new::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(16, 185, 129, 0.6);
+    animation: pulseBorder 1.2s ease-out infinite;
+    pointer-events: none;
+}
+
+@keyframes pulseBorder {
+    0% {
+        opacity: 0.8;
+        transform: scale(1);
+    }
+    70% {
+        opacity: 0;
+        transform: scale(1.05);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.05);
+    }
+}
 @keyframes feedIn {
-    from { opacity: 0; transform: translateY(-10px); background: rgba(16,185,129,0.1); }
-    to   { opacity: 1; transform: translateY(0);     background: transparent; }
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+        background: rgba(16,185,129,0.1);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        background: transparent;
+    }
 }
 </style>
 
@@ -154,6 +187,13 @@ function liveFeed(initialMaxId) {
                     const found = this.items.find(i => i.id === item.id);
                     if (found) found.isNew = false;
                 }, 5000);
+            });
+        },
+
+        sendTest() {
+            fetch('/dev/test-socket', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '' },
             });
         },
 

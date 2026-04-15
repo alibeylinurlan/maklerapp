@@ -20,6 +20,25 @@ Route::middleware('auth')->group(function () {
     Route::get('/matches', fn() => redirect()->route('customers.index'))->name('matches.index');
     Volt::route('/pricing', 'pricing')->name('pricing');
 
+    // Developer test route
+    Route::post('/dev/test-socket', function () {
+        if (!auth()->user()->hasRole('developer|superadmin|admin')) abort(403);
+        $fake = [
+            'id'          => 999999 + rand(1, 999),
+            'price'       => number_format(rand(40000, 200000)) . ' ₼',
+            'rooms'       => rand(1, 5),
+            'area'        => rand(40, 150),
+            'floor'       => rand(1, 12),
+            'floor_total' => 16,
+            'location'    => 'Bakı, Nəsimi r.',
+            'category'    => 'Mənzil',
+            'thumb'       => null,
+            'url'         => '#',
+        ];
+        \Illuminate\Support\Facades\Redis::publish('properties.new', json_encode($fake));
+        return response()->json(['ok' => true]);
+    })->name('dev.test-socket');
+
     // Admin panel
     Route::middleware('role:superadmin|admin')->prefix('admin')->group(function () {
         Volt::route('/users', 'admin.users.index')->name('admin.users');
