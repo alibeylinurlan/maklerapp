@@ -23,7 +23,7 @@ new class extends Component {
                 <span class="relative inline-flex size-2.5 rounded-full"
                       :class="connected ? 'bg-emerald-500' : 'bg-zinc-600'"></span>
             </span>
-            <span class="text-sm font-semibold text-white tracking-wide">Canlı axın | Yeni elanlar</span>
+            <span class="text-sm font-semibold text-white tracking-wide">Canlı | Yeni elanlar</span>
         </div>
         @if(auth()->user()->hasAnyRole(['developer', 'superadmin', 'admin']))
         <button @click="sendTest()"
@@ -68,10 +68,10 @@ new class extends Component {
                     <div class="flex items-start justify-between gap-1">
                         <span class="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors"
                               x-text="item.price || 'Qiymət yox'"></span>
-                        <!--<span x-show="item.isNew"
+                        <span x-show="item.isNew"
                               class="shrink-0 rounded-sm bg-emerald-500/30 border border-emerald-500/40 px-1 py-0.5 text-[9px] font-bold uppercase tracking-widest text-emerald-400">
                             YENİ
-                        </span>-->
+                        </span>
                     </div>
 
                     <div class="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-white/50">
