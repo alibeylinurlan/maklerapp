@@ -71,6 +71,7 @@ Route::middleware('auth')->group(function () {
                     'thumb'       => $thumb,
                     'url'         => $p->full_url,
                     'at'          => $p->bumped_at?->diffForHumans() ?? $p->created_at?->diffForHumans(),
+                    'created_at'  => $p->bumped_at?->toISOString() ?? $p->created_at?->toISOString(),
                 ];
             });
         return response()->json($props);

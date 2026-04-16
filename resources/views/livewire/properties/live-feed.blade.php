@@ -35,7 +35,7 @@ new class extends Component {
         <button @click="sendTest()"
                 class="rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30 transition-colors">
             Test
-        </button>
+        </butt
         @endif
     </div>
 
@@ -214,6 +214,7 @@ function liveFeed(initialMaxId) {
         connected: false,
         socket: null,
         tick: Date.now(),
+        lastId: initialMaxId,
 
         init() {
             this.connect();
@@ -222,6 +223,34 @@ function liveFeed(initialMaxId) {
                 this.tick = Date.now();
                 this.items = this.items.map(i => i);
             }, 1000);
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    this.fetchMissed();
+                }
+            });
+        },
+
+        fetchMissed() {
+            fetch(`/api/properties/new?since=${this.lastId}`)
+                .then(r => r.json())
+                .then(list => list.forEach(data => this.addItem(data, false)))
+                .catch(() => {});
+        },
+
+        addItem(data, isNew = true) {
+            if (this.items.some(i => i.id === data.id)) return;
+            if (data.id > this.lastId) this.lastId = data.id;
+
+            const item = { ...data, isNew, created_at: data.created_at ?? new Date().toISOString() };
+            this.items = [item, ...this.items].slice(0, 50);
+
+            if (isNew) {
+                setTimeout(() => {
+                    const found = this.items.find(i => i.id === item.id);
+                    if (found) found.isNew = false;
+                }, 5000);
+            }
         },
 
         connect() {
@@ -241,20 +270,7 @@ function liveFeed(initialMaxId) {
             this.socket.on('disconnect', () => this.connected = false);
 
             this.socket.on('property.created', (data) => {
-                if (this.items.some(i => i.id === data.id)) return;
-
-                const item = {
-                    ...data,
-                    isNew: true,
-                    created_at: data.created_at ?? new Date().toISOString(),
-                };
-
-                this.items = [item, ...this.items].slice(0, 50);
-
-                setTimeout(() => {
-                    const found = this.items.find(i => i.id === item.id);
-                    if (found) found.isNew = false;
-                }, 5000);
+                this.addItem(data, true);
             });
         },
 
