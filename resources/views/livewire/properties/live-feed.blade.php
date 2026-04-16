@@ -60,140 +60,166 @@ new class extends Component {
 
         <template x-for="item in items" :key="item.id">
 
-            <a :href="item.url"
-               target="_blank"
-               class="flex gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors group mb-2"
-               :class="item.isNew ? 'feed-new' : ''">
+            <div class="feed-slot">
 
-                {{-- IMAGE --}}
-                <div class="shrink-0 size-12 overflow-hidden rounded-lg bg-white/10">
+                <a :href="item.url"
+                   target="_blank"
+                   class="flex gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors group mb-2"
+                   :class="item.isNew ? 'feed-enter feed-glow' : 'feed-enter'">
 
-                    <template x-if="item.thumb">
-                        <img :src="item.thumb"
-                             class="size-full object-cover"
-                             loading="lazy">
-                    </template>
+                    {{-- IMAGE --}}
+                    <div class="shrink-0 size-12 overflow-hidden rounded-lg bg-white/10">
 
-                    <template x-if="!item.thumb">
-                        <div class="size-full flex items-center justify-center text-white/20">
-                            <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                    d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 21h18M6.75 6.75h.008v.008H6.75V6.75z"/>
-                            </svg>
+                        <template x-if="item.thumb">
+                            <img :src="item.thumb"
+                                 class="size-full object-cover"
+                                 loading="lazy">
+                        </template>
+
+                        <template x-if="!item.thumb">
+                            <div class="size-full flex items-center justify-center text-white/20">
+                                <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                        d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 21h18M6.75 6.75h.008v.008H6.75V6.75z"/>
+                                </svg>
+                            </div>
+                        </template>
+                    </div>
+
+                    {{-- CONTENT --}}
+                    <div class="min-w-0 flex-1">
+
+                        <div class="flex items-start justify-between gap-1">
+                            <span class="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors"
+                                  x-text="item.price || 'Qiymət yox'"></span>
+
+                            <span x-show="item.isNew"
+                                  class="blink-soft shrink-0 rounded-sm bg-emerald-500/30 border border-emerald-500/40 px-1 py-0.5 text-[9px] font-bold uppercase tracking-widest text-emerald-400">
+                                YENİ
+                            </span>
                         </div>
-                    </template>
-                </div>
 
-                {{-- CONTENT --}}
-                <div class="min-w-0 flex-1">
+                        <div class="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-white/50">
 
-                    <div class="flex items-start justify-between gap-1">
-                        <span class="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors"
-                              x-text="item.price || 'Qiymət yox'"></span>
+                            <span x-show="item.category"
+                                  x-text="item.category"
+                                  class="text-indigo-400/80"></span>
 
-                        <span x-show="item.isNew"
-                              class="shrink-0 rounded-sm bg-emerald-500/30 border border-emerald-500/40 px-1 py-0.5 text-[9px] font-bold uppercase tracking-widest text-emerald-400">
-                            YENİ
-                        </span>
+                            <template x-if="item.category && (item.rooms || item.area)">
+                                <span>·</span>
+                            </template>
+
+                            <span x-show="item.rooms"
+                                  x-text="item.rooms + ' otaq'"></span>
+
+                            <template x-if="item.rooms && item.area">
+                                <span>·</span>
+                            </template>
+
+                            <span x-show="item.area"
+                                  x-text="item.area + ' m²'"></span>
+
+                            <template x-if="item.floor">
+                                <span x-text="'· ' + item.floor + (item.floor_total ? '/' + item.floor_total : '')"></span>
+                            </template>
+                        </div>
+
+                        <div x-show="item.location"
+                             class="mt-0.5 truncate text-xs text-white"
+                             x-text="item.location"></div>
+
+                        {{-- TIME --}}
+                        <div class="mt-1 text-[10px] text-white/50"
+                             x-text="formatTime(item.created_at)"></div>
+
                     </div>
+                </a>
 
-                    <div class="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-white/50">
-
-                        <span x-show="item.category"
-                              x-text="item.category"
-                              class="text-indigo-400/80"></span>
-
-                        <template x-if="item.category && (item.rooms || item.area)">
-                            <span>·</span>
-                        </template>
-
-                        <span x-show="item.rooms"
-                              x-text="item.rooms + ' otaq'"></span>
-
-                        <template x-if="item.rooms && item.area">
-                            <span>·</span>
-                        </template>
-
-                        <span x-show="item.area"
-                              x-text="item.area + ' m²'"></span>
-
-                        <template x-if="item.floor">
-                            <span x-text="'· ' + item.floor + (item.floor_total ? '/' + item.floor_total : '')"></span>
-                        </template>
-                    </div>
-
-                    <div x-show="item.location"
-                         class="mt-0.5 truncate text-xs text-white/35"
-                         x-text="item.location"></div>
-
-                    {{-- TIME AGO --}}
-                    <div class="mt-1 text-[10px] text-white/50"
-                         x-text="formatTime(item.created_at)"></div>
-
-                </div>
-            </a>
+            </div>
 
         </template>
     </div>
 </div>
 
-{{-- STYLE (UNCHANGED) --}}
 <style>
-.feed-new {
-    position: relative;
-    animation: feedIn 0.4s ease both;
+.feed-slot {
+    overflow: hidden;
+    animation: slotOpen 0.35s ease-out both;
 }
 
-.feed-new::after {
+@keyframes slotOpen {
+    from { max-height: 0; opacity: 0; }
+    to { max-height: 200px; opacity: 1; }
+}
+
+.feed-enter {
+    animation: feedEnter 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes feedEnter {
+    0% {
+        opacity: 0;
+        transform: translateY(-14px) scale(0.98);
+        filter: blur(2px);
+    }
+    60% {
+        opacity: 1;
+        transform: translateY(2px) scale(1.01);
+        filter: blur(0);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* CLEAN GLOW (NO PULSE, NO JITTER) */
+.feed-glow {
+    position: relative;
+}
+
+.feed-glow::after {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: 0.5rem;
-    border: 1px solid rgba(16, 185, 129, 0.6);
-    animation: pulseBorder 1.2s ease-out infinite;
     pointer-events: none;
+
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    box-shadow: 0 0 18px rgba(16, 185, 129, 0.25);
+
+    animation: glowOnce 1.2s ease-out forwards;
 }
 
-@keyframes pulseBorder {
-    0% { opacity: 0.8; transform: scale(1); }
-    70% { opacity: 0; transform: scale(1.05); }
-    100% { opacity: 0; transform: scale(1.05); }
-}
-
-@keyframes feedIn {
-    from {
+@keyframes glowOnce {
+    0% {
         opacity: 0;
-        transform: translateY(-10px);
-        background: rgba(16,185,129,0.1);
+        box-shadow: 0 0 0 rgba(16, 185, 129, 0);
     }
-    to {
+    30% {
         opacity: 1;
-        transform: translateY(0);
-        background: transparent;
+        box-shadow: 0 0 14px rgba(16, 185, 129, 0.25);
+    }
+    100% {
+        opacity: 0;
+        box-shadow: 0 0 0 rgba(16, 185, 129, 0);
     }
 }
 </style>
 
-{{-- SCRIPT --}}
 <script>
 function liveFeed(initialMaxId) {
     return {
         items: [],
-        lastKnownId: initialMaxId,
         connected: false,
         socket: null,
-
-        // 🔥 IMPORTANT FIX
         tick: Date.now(),
 
         init() {
             this.connect();
 
-            // 🔥 1 second live update
             setInterval(() => {
                 this.tick = Date.now();
-
-                // keep Alpine reactivity alive (prevents pulse loss)
                 this.items = this.items.map(i => i);
             }, 1000);
         },
@@ -211,13 +237,8 @@ function liveFeed(initialMaxId) {
                 reconnectionAttempts: Infinity,
             });
 
-            this.socket.on('connect', () => {
-                this.connected = true;
-            });
-
-            this.socket.on('disconnect', () => {
-                this.connected = false;
-            });
+            this.socket.on('connect', () => this.connected = true);
+            this.socket.on('disconnect', () => this.connected = false);
 
             this.socket.on('property.created', (data) => {
                 if (this.items.some(i => i.id === data.id)) return;
