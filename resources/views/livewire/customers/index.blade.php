@@ -18,7 +18,7 @@ new class extends Component {
     #[Url] public ?int $selectedCustomerId = null;
 
     // Right panel
-    #[Url] public string $rightTab = 'requests';
+    #[Url] public ?int $selectedRequestId = null;
     #[Url] public string $matchStatus = 'new';
 
     // Customer form
@@ -55,7 +55,6 @@ new class extends Component {
     public array $selectedMatchIds = [];
 
     public function updatedSearch(): void { $this->resetPage(); $this->selectedCustomerId = null; }
-    public function updatedRightTab(): void { $this->matchStatus = 'new'; $this->selectedMatchIds = []; }
     public function updatedMatchStatus(): void { $this->selectedMatchIds = []; }
 
 
@@ -64,8 +63,16 @@ new class extends Component {
     public function selectCustomer(int $id): void
     {
         $this->selectedCustomerId = $this->selectedCustomerId === $id ? null : $id;
-        $this->rightTab = 'requests';
+        $this->selectedRequestId = null;
         $this->matchStatus = 'new';
+    }
+
+    public function selectRequest(int $id): void
+    {
+        $this->selectedRequestId = $this->selectedRequestId === $id ? null : $id;
+        $this->matchStatus = 'new';
+        $this->selectedMatchIds = [];
+        $this->resetPage();
     }
 
     public function createCustomer(): void
@@ -200,7 +207,7 @@ new class extends Component {
         }
 
         $this->showRequestForm = false;
-        $this->rightTab = 'matches';
+        $this->selectedRequestId = $req->id;
         $this->matchStatus = 'new';
     }
 
@@ -278,6 +285,7 @@ new class extends Component {
         // Right panel data
         $selectedCustomer = null;
         $requests = collect();
+        $selectedRequest = null;
         $matches = collect();
         $matchCounts = ['new' => 0, 'viewed' => 0, 'in_progress' => 0, 'dismissed' => 0];
 
@@ -294,22 +302,25 @@ new class extends Component {
                     ->orderByDesc('created_at')
                     ->get();
 
-                $requestIds = $requests->pluck('id');
+                if ($this->selectedRequestId) {
+                    $selectedRequest = $requests->firstWhere('id', $this->selectedRequestId);
 
-                if ($this->rightTab === 'matches' && $requestIds->isNotEmpty()) {
-                    $matches = PropertyMatch::with(['property', 'customerRequest'])
-                        ->where('user_id', auth()->id())
-                        ->whereIn('customer_request_id', $requestIds)
-                        ->where('status', $this->matchStatus)
-                        ->orderByDesc('created_at')
-                        ->paginate(20);
+                    if ($selectedRequest) {
+                        $matches = PropertyMatch::with('property')
+                            ->where('user_id', auth()->id())
+                            ->where('customer_request_id', $this->selectedRequestId)
+                            ->where('status', $this->matchStatus)
+                            ->orderByDesc('created_at')
+                            ->paginate(20);
 
-                    $matchCounts = [
-                        'new'         => PropertyMatch::where('user_id', auth()->id())->whereIn('customer_request_id', $requestIds)->where('status', 'new')->count(),
-                        'viewed'      => PropertyMatch::where('user_id', auth()->id())->whereIn('customer_request_id', $requestIds)->where('status', 'viewed')->count(),
-                        'in_progress' => PropertyMatch::where('user_id', auth()->id())->whereIn('customer_request_id', $requestIds)->where('status', 'in_progress')->count(),
-                        'dismissed'   => PropertyMatch::where('user_id', auth()->id())->whereIn('customer_request_id', $requestIds)->where('status', 'dismissed')->count(),
-                    ];
+                        $q = PropertyMatch::where('user_id', auth()->id())->where('customer_request_id', $this->selectedRequestId);
+                        $matchCounts = [
+                            'new'         => (clone $q)->where('status', 'new')->count(),
+                            'viewed'      => (clone $q)->where('status', 'viewed')->count(),
+                            'in_progress' => (clone $q)->where('status', 'in_progress')->count(),
+                            'dismissed'   => (clone $q)->where('status', 'dismissed')->count(),
+                        ];
+                    }
                 }
             }
         }
@@ -320,6 +331,7 @@ new class extends Component {
             'selectedCustomer' => $selectedCustomer,
             'canUseRequests'   => $canUseRequests,
             'requests'         => $requests,
+            'selectedRequest'  => $selectedRequest,
             'matches'          => $matches,
             'matchCounts'      => $matchCounts,
             'categories'       => Category::where('is_active', true)->get(),
@@ -447,211 +459,175 @@ new class extends Component {
 
         @else
 
-        {{-- Tabs --}}
-        <div class="flex gap-0 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-6">
-            @php
-                $totalNew = $requests->sum('new_matches_count');
-            @endphp
-            <button wire:click="$set('rightTab', 'requests')"
-                class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors
-                    {{ $rightTab === 'requests'
-                        ? 'border-indigo-600 text-indigo-600'
-                        : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200' }}">
-                İstəklər
-                @if($requests->count() > 0)
-                    <span class="ml-1.5 text-xs text-zinc-400">({{ $requests->count() }})</span>
-                @endif
-            </button>
-            <button wire:click="$set('rightTab', 'matches')"
-                class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2
-                    {{ $rightTab === 'matches'
-                        ? 'border-indigo-600 text-indigo-600'
-                        : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200' }}">
-                Uyğunluqlar
-                @if($totalNew > 0)
-                    <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-green-500 text-white text-xs font-bold leading-none">
-                        {{ $totalNew }}
-                    </span>
-                @endif
-            </button>
-        </div>
+        {{-- ── SPLIT: İSTƏKLƏR + UYĞUNLUQLAR ── --}}
+        <div class="flex flex-1 min-w-0 overflow-hidden">
 
-        {{-- ── İSTƏKLƏR TAB ── --}}
-        @if($rightTab === 'requests')
-        <div class="flex-1 p-6 overflow-y-auto">
-            <div class="flex justify-end mb-4">
-                <flux:button wire:click="createRequest" variant="primary" icon="plus" size="sm">Yeni istək</flux:button>
-            </div>
+            {{-- İstəklər siyahısı --}}
+            <div class="flex flex-col border-r border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 h-full overflow-hidden transition-all duration-200
+                {{ $selectedRequestId ? 'w-72 shrink-0' : 'flex-1' }}">
 
-            @if($requests->isEmpty())
-            <div class="flex flex-col items-center justify-center gap-2 py-16 text-zinc-400">
-                <flux:icon.clipboard-document-list class="size-10 opacity-30" />
-                <p class="text-sm">Hələ istək yoxdur</p>
-            </div>
-            @else
-            <div class="space-y-3">
-                @foreach($requests as $req)
-                <div class="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="font-semibold text-sm text-zinc-800 dark:text-zinc-200">{{ $req->name }}</span>
-                            </div>
-
-                            {{-- Filters --}}
-                            <div class="mt-2 flex flex-wrap gap-1">
-                                @if(!empty($req->filters['categoryId']))
-                                    <flux:badge size="sm" color="blue">{{ $categories->firstWhere('id', $req->filters['categoryId'])?->name_az ?? $req->filters['categoryId'] }}</flux:badge>
-                                @endif
-                                @if(!empty($req->filters['priceMin']) || !empty($req->filters['priceMax']))
-                                    <flux:badge size="sm" color="green">{{ $req->filters['priceMin'] ?? '0' }}-{{ $req->filters['priceMax'] ?? '∞' }} AZN</flux:badge>
-                                @endif
-                                @if(!empty($req->filters['roomMin']) || !empty($req->filters['roomMax']))
-                                    <flux:badge size="sm" color="purple">{{ $req->filters['roomMin'] ?? '1' }}-{{ $req->filters['roomMax'] ?? '∞' }} otaq</flux:badge>
-                                @endif
-                                @if(!empty($req->filters['areaMin']) || !empty($req->filters['areaMax']))
-                                    <flux:badge size="sm" color="amber">{{ $req->filters['areaMin'] ?? '0' }}-{{ $req->filters['areaMax'] ?? '∞' }} m²</flux:badge>
-                                @endif
-                                @if(!empty($req->filters['locationIds']))
-                                    <flux:badge size="sm" color="zinc">{{ count((array)($req->filters['locationIds'] ?? [])) }} ərazi</flux:badge>
-                                @endif
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-2 shrink-0">
-                            {{-- Matches count --}}
-                            <button wire:click="$set('rightTab', 'matches')"
-                                class="flex items-center gap-1 hover:opacity-70 transition-opacity">
-                                <flux:badge size="sm" color="{{ $req->new_matches_count > 0 ? 'green' : 'zinc' }}">
-                                    {{ $req->matches_count }}
-                                </flux:badge>
-                                @if($req->new_matches_count > 0)
-                                    <span class="text-xs text-green-600 font-medium">{{ $req->new_matches_count }} yeni</span>
-                                @endif
-                            </button>
-
-                            <flux:button wire:click="editRequest({{ $req->id }})" size="xs" variant="ghost" icon="pencil-square" />
-                            <flux:button wire:click="deleteRequest({{ $req->id }})" wire:confirm="Bu istəyi silmək istəyirsiniz?" size="xs" variant="ghost" icon="trash" class="text-red-500" />
-                        </div>
-                    </div>
+                <div class="flex items-center justify-between px-4 py-3 border-b border-zinc-100 dark:border-zinc-800">
+                    <span class="text-sm font-medium text-zinc-600 dark:text-zinc-400">İstəklər</span>
+                    <flux:button wire:click="createRequest" variant="primary" icon="plus" size="xs">Yeni</flux:button>
                 </div>
-                @endforeach
-            </div>
-            @endif
-        </div>
-        @endif
 
-        {{-- ── UYĞUNLUQLAR TAB ── --}}
-        @if($rightTab === 'matches')
-        <div class="flex-1 p-6 overflow-y-auto">
-            {{-- Status filter --}}
-            <div class="flex flex-wrap gap-1 mb-4">
-                <flux:button wire:click="$set('matchStatus', 'new')" variant="{{ $matchStatus === 'new' ? 'primary' : 'ghost' }}" size="sm">
-                    Yeni ({{ $matchCounts['new'] }})
-                </flux:button>
-                <flux:button wire:click="$set('matchStatus', 'viewed')" variant="{{ $matchStatus === 'viewed' ? 'primary' : 'ghost' }}" size="sm">
-                    Baxılıb ({{ $matchCounts['viewed'] }})
-                </flux:button>
-                <flux:button wire:click="$set('matchStatus', 'in_progress')" variant="{{ $matchStatus === 'in_progress' ? 'primary' : 'ghost' }}" size="sm">
-                    Nəzarətdə ({{ $matchCounts['in_progress'] }})
-                </flux:button>
-                <flux:button wire:click="$set('matchStatus', 'dismissed')" variant="{{ $matchStatus === 'dismissed' ? 'primary' : 'ghost' }}" size="sm">
-                    Keçildi ({{ $matchCounts['dismissed'] }})
-                </flux:button>
-            </div>
-
-            {{-- Bulk action bar --}}
-            @if(count($selectedMatchIds) > 0)
-            <div class="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800">
-                <span class="text-sm font-medium text-indigo-700 dark:text-indigo-300">{{ count($selectedMatchIds) }} seçilib</span>
-                <div class="flex gap-1 ml-auto">
-                    @if($matchStatus !== 'viewed')
-                    <flux:button wire:click="bulkMarkViewed" size="xs" variant="ghost" icon="eye">Baxıldı</flux:button>
-                    @endif
-                    @if($matchStatus !== 'in_progress')
-                    <flux:button wire:click="bulkMarkInProgress" size="xs" variant="ghost" icon="clock">Nəzarətdə</flux:button>
-                    @endif
-                    @if($matchStatus !== 'dismissed')
-                    <flux:button wire:click="bulkDismiss" size="xs" variant="ghost" icon="x-mark" class="text-red-500">Keç</flux:button>
-                    @endif
-                </div>
-            </div>
-            @endif
-
-            @if($matches instanceof \Illuminate\Pagination\LengthAwarePaginator ? $matches->isEmpty() : $matches->isEmpty())
-            <div class="flex flex-col items-center justify-center gap-2 py-16 text-zinc-400">
-                <flux:icon.check-badge class="size-10 opacity-30" />
-                <p class="text-sm">Bu statusda uyğunluq yoxdur</p>
-            </div>
-            @else
-            <div class="space-y-3">
-                @foreach($matches as $match)
-                <div class="flex gap-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3
-                    {{ in_array($match->id, $selectedMatchIds) ? 'ring-2 ring-indigo-400' : '' }}">
-
-                    {{-- Checkbox --}}
-                    <div class="flex items-start pt-1">
-                        <input type="checkbox"
-                               wire:model.live="selectedMatchIds"
-                               value="{{ $match->id }}"
-                               class="size-4 rounded border-zinc-300 dark:border-zinc-600 text-indigo-600 cursor-pointer">
+                <div class="flex-1 overflow-y-auto">
+                    @if($requests->isEmpty())
+                    <div class="flex flex-col items-center justify-center gap-2 py-16 text-zinc-400">
+                        <flux:icon.clipboard-document-list class="size-10 opacity-30" />
+                        <p class="text-sm">Hələ istək yoxdur</p>
                     </div>
-
-                    {{-- Photo --}}
-                    @php($thumb = $match->property?->photos[0]['thumb'] ?? $match->property?->photos[0]['medium'] ?? null)
-                    @if($thumb)
-                        <img src="{{ $thumb }}" alt="" class="h-16 w-24 rounded-lg object-cover shrink-0" loading="lazy">
                     @else
-                        <div class="flex h-16 w-24 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-400 shrink-0">Şəkil yox</div>
-                    @endif
-
-                    {{-- Info --}}
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-start justify-between gap-2">
-                            <div>
-                                <div class="font-semibold text-sm text-zinc-800 dark:text-zinc-100">
-                                    {{ number_format($match->property?->price) }} {{ $match->property?->currency }}
+                    <div class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        @foreach($requests as $req)
+                        @php $isSelected = $selectedRequestId === $req->id; @endphp
+                        <div class="px-4 py-3 transition-colors
+                            {{ $isSelected ? 'bg-indigo-50 dark:bg-indigo-950/40 border-l-2 border-l-indigo-500' : 'border-l-2 border-l-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800/50' }}">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-sm font-medium truncate {{ $isSelected ? 'text-indigo-700 dark:text-indigo-300' : 'text-zinc-800 dark:text-zinc-200' }}">
+                                        {{ $req->name }}
+                                    </div>
+                                    <div class="mt-1 flex items-center gap-2">
+                                        <button wire:click="selectRequest({{ $req->id }})"
+                                                class="flex items-center gap-1 hover:opacity-70 transition-opacity">
+                                            <flux:badge size="sm" color="{{ $req->new_matches_count > 0 ? 'green' : 'zinc' }}">
+                                                {{ $req->matches_count }}
+                                            </flux:badge>
+                                            @if($req->new_matches_count > 0)
+                                                <span class="text-xs text-green-600 font-medium">{{ $req->new_matches_count }} yeni</span>
+                                            @endif
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="mt-0.5 text-xs text-zinc-500 flex flex-wrap gap-x-3 gap-y-0.5">
-                                    @if($match->property?->rooms)
-                                        <span>{{ $match->property->rooms }} otaq</span>
-                                    @endif
-                                    @if($match->property?->area)
-                                        <span>{{ $match->property->area }} m²</span>
-                                    @endif
-                                    @if($match->property?->location_full_name)
-                                        <span class="truncate max-w-48">{{ $match->property->location_full_name }}</span>
-                                    @endif
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <flux:button wire:click="editRequest({{ $req->id }})" size="xs" variant="ghost" icon="pencil-square" />
+                                    <flux:button wire:click="deleteRequest({{ $req->id }})" wire:confirm="Bu istəyi silmək istəyirsiniz?" size="xs" variant="ghost" icon="trash" class="text-red-500" />
                                 </div>
-                                <div class="mt-1 text-xs text-indigo-500">{{ $match->customerRequest?->name }}</div>
-                            </div>
-                            <div class="flex gap-1 shrink-0">
-                                <a href="{{ $match->property?->full_url }}" target="_blank">
-                                    <flux:button size="xs" variant="ghost" icon="arrow-top-right-on-square" />
-                                </a>
-                                @if($match->status !== 'viewed')
-                                    <flux:button wire:click="markViewed({{ $match->id }})" size="xs" variant="ghost" icon="eye" title="Baxıldı" />
-                                @endif
-                                @if($match->status !== 'in_progress')
-                                    <flux:button wire:click="markInProgress({{ $match->id }})" size="xs" variant="ghost" icon="clock" title="Nəzarətdə" />
-                                @endif
-                                @if($match->status !== 'dismissed')
-                                    <flux:button wire:click="dismiss({{ $match->id }})" size="xs" variant="ghost" icon="x-mark" class="text-red-500" title="Keç" />
-                                @endif
                             </div>
                         </div>
-                        <div class="mt-1 text-xs text-zinc-400">{{ ($match->property?->bumped_at ?? $match->property?->created_at)?->diffForHumans() }}</div>
+                        @endforeach
                     </div>
+                    @endif
                 </div>
-                @endforeach
             </div>
 
-            @if($matches instanceof \Illuminate\Pagination\LengthAwarePaginator)
-            <div class="mt-4">{{ $matches->links() }}</div>
+            {{-- Uyğunluqlar paneli --}}
+            @if($selectedRequestId && $selectedRequest)
+            <div class="flex-1 flex flex-col overflow-hidden">
+
+                {{-- Header --}}
+                <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900">
+                    <span class="text-sm font-medium text-zinc-700 dark:text-zinc-200 truncate">{{ $selectedRequest->name }}</span>
+                    <button wire:click="selectRequest({{ $selectedRequestId }})" class="text-zinc-400 hover:text-zinc-600 shrink-0">
+                        <flux:icon.x-mark class="size-4" />
+                    </button>
+                </div>
+
+                {{-- Status tabs --}}
+                <div class="flex gap-1 px-4 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                    @foreach(['new' => 'Yeni', 'viewed' => 'Baxılıb', 'in_progress' => 'Nəzarətdə', 'dismissed' => 'Keçildi'] as $status => $label)
+                    <flux:button wire:click="$set('matchStatus', '{{ $status }}')"
+                        variant="{{ $matchStatus === $status ? 'primary' : 'ghost' }}" size="xs">
+                        {{ $label }} ({{ $matchCounts[$status] }})
+                    </flux:button>
+                    @endforeach
+                </div>
+
+                {{-- Bulk action bar --}}
+                @if(count($selectedMatchIds) > 0)
+                <div class="flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/40 border-b border-indigo-200 dark:border-indigo-800">
+                    <span class="text-sm font-medium text-indigo-700 dark:text-indigo-300">{{ count($selectedMatchIds) }} seçilib</span>
+                    <div class="flex gap-1 ml-auto">
+                        @if($matchStatus !== 'viewed')
+                        <flux:button wire:click="bulkMarkViewed" size="xs" variant="ghost" icon="eye">Baxıldı</flux:button>
+                        @endif
+                        @if($matchStatus !== 'in_progress')
+                        <flux:button wire:click="bulkMarkInProgress" size="xs" variant="ghost" icon="clock">Nəzarətdə</flux:button>
+                        @endif
+                        @if($matchStatus !== 'dismissed')
+                        <flux:button wire:click="bulkDismiss" size="xs" variant="ghost" icon="x-mark" class="text-red-500">Keç</flux:button>
+                        @endif
+                    </div>
+                </div>
+                @endif
+
+                {{-- Match list --}}
+                <div class="flex-1 overflow-y-auto p-4">
+                    @if($matches->isEmpty())
+                    <div class="flex flex-col items-center justify-center gap-2 py-16 text-zinc-400">
+                        <flux:icon.check-badge class="size-10 opacity-30" />
+                        <p class="text-sm">Bu statusda uyğunluq yoxdur</p>
+                    </div>
+                    @else
+                    <div class="space-y-3">
+                        @foreach($matches as $match)
+                        <div class="flex gap-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3
+                            {{ in_array($match->id, $selectedMatchIds) ? 'ring-2 ring-indigo-400' : '' }}">
+
+                            {{-- Checkbox --}}
+                            <div class="flex items-start pt-1">
+                                <input type="checkbox" wire:model.live="selectedMatchIds" value="{{ $match->id }}"
+                                       class="size-4 rounded border-zinc-300 dark:border-zinc-600 text-indigo-600 cursor-pointer">
+                            </div>
+
+                            {{-- Photo --}}
+                            @php($thumb = $match->property?->photos[0]['thumb'] ?? $match->property?->photos[0]['medium'] ?? null)
+                            @if($thumb)
+                                <img src="{{ $thumb }}" alt="" class="h-16 w-24 rounded-lg object-cover shrink-0" loading="lazy">
+                            @else
+                                <div class="flex h-16 w-24 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-400 shrink-0">Şəkil yox</div>
+                            @endif
+
+                            {{-- Info --}}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div>
+                                        <div class="font-semibold text-sm text-zinc-800 dark:text-zinc-100">
+                                            {{ number_format($match->property?->price) }} {{ $match->property?->currency }}
+                                        </div>
+                                        <div class="mt-0.5 text-xs text-zinc-500 flex flex-wrap gap-x-3 gap-y-0.5">
+                                            @if($match->property?->rooms)
+                                                <span>{{ $match->property->rooms }} otaq</span>
+                                            @endif
+                                            @if($match->property?->area)
+                                                <span>{{ $match->property->area }} m²</span>
+                                            @endif
+                                            @if($match->property?->location_full_name)
+                                                <span class="truncate max-w-48">{{ $match->property->location_full_name }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-1 shrink-0">
+                                        <a href="{{ $match->property?->full_url }}" target="_blank">
+                                            <flux:button size="xs" variant="ghost" icon="arrow-top-right-on-square" />
+                                        </a>
+                                        @if($match->status !== 'viewed')
+                                            <flux:button wire:click="markViewed({{ $match->id }})" size="xs" variant="ghost" icon="eye" title="Baxıldı" />
+                                        @endif
+                                        @if($match->status !== 'in_progress')
+                                            <flux:button wire:click="markInProgress({{ $match->id }})" size="xs" variant="ghost" icon="clock" title="Nəzarətdə" />
+                                        @endif
+                                        @if($match->status !== 'dismissed')
+                                            <flux:button wire:click="dismiss({{ $match->id }})" size="xs" variant="ghost" icon="x-mark" class="text-red-500" title="Keç" />
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="mt-1 text-xs text-zinc-400">{{ ($match->property?->bumped_at ?? $match->property?->created_at)?->diffForHumans() }}</div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    <div class="mt-4">{{ $matches->links() }}</div>
+                    @endif
+                </div>
+            </div>
+            @elseif($selectedRequestId && !$selectedRequest)
+                {{-- selectedRequestId var amma request tapılmadı (silinib) --}}
+                @php($this->selectedRequestId = null)
             @endif
-            @endif
-        </div>
-        @endif
+
+        </div>{{-- end split --}}
 
         @endif {{-- canUseRequests --}}
         @endif {{-- selectedCustomer --}}
