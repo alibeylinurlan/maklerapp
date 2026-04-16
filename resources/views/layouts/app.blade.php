@@ -38,13 +38,13 @@
                 >Elanlar</flux:navlist.item>
             </flux:navlist.group>
 
-            <flux:navlist.group heading="Müştərilər">
+            <flux:navlist.group heading="Müştərilərim">
                 <flux:navlist.item
                     icon="users"
                     :icon:trailing="$hasRequests ? null : 'lock-closed'"
                     :href="route('customers.index')"
                     :current="request()->routeIs('customers.*')"
-                >Müştərilər</flux:navlist.item>
+                >Müştərilərim <em class="text-[10px] font-normal text-zinc-400 italic">(alıcılar)</em></flux:navlist.item>
             </flux:navlist.group>
         </flux:navlist>
 

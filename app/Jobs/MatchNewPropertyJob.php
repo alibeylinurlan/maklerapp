@@ -39,7 +39,7 @@ class MatchNewPropertyJob implements ShouldQueue
         $matchCount = 0;
 
         foreach ($requests as $request) {
-            if ($this->matchesFilters($property, $request->filters)) {
+            if (self::matchesFilters($property, $request->filters)) {
                 PropertyMatch::firstOrCreate(
                     [
                         'property_id' => $property->id,
@@ -59,56 +59,45 @@ class MatchNewPropertyJob implements ShouldQueue
         }
     }
 
-    private function matchesFilters(Property $property, array $filters): bool
+    public static function matchesFilters(Property $property, array $filters): bool
     {
-        // Kateqoriya yoxlaması
-        if (!empty($filters['categoryId']) && $property->category) {
-            if ($property->category->bina_id !== $filters['categoryId']) {
+        // Kateqoriya (DB id)
+        if (!empty($filters['categoryId'])) {
+            if ((string) $property->category_id !== (string) $filters['categoryId']) {
                 return false;
             }
         }
 
-        // Lokasiya yoxlaması
-        if (!empty($filters['locationIds']) && $property->location) {
-            $requestLocationIds = array_map('strval', $filters['locationIds']);
-            if (!in_array($property->location->bina_id, $requestLocationIds)) {
+        // Lokasiya (DB id)
+        if (!empty($filters['locationIds'])) {
+            $ids = array_map('strval', $filters['locationIds']);
+            if (!in_array((string) $property->location_id, $ids)) {
                 return false;
             }
         }
 
-        // Qiymət aralığı
-        if (isset($filters['priceMin']) && $property->price < $filters['priceMin']) {
-            return false;
-        }
-        if (isset($filters['priceMax']) && $property->price > $filters['priceMax']) {
-            return false;
-        }
+        // Qiymət
+        if (isset($filters['priceMin']) && $property->price < $filters['priceMin']) return false;
+        if (isset($filters['priceMax']) && $property->price > $filters['priceMax']) return false;
 
-        // Otaq sayı
-        if (isset($filters['roomMin']) && $property->rooms < $filters['roomMin']) {
-            return false;
-        }
-        if (isset($filters['roomMax']) && $property->rooms > $filters['roomMax']) {
-            return false;
-        }
+        // Otaq
+        if (isset($filters['roomMin']) && $property->rooms < $filters['roomMin']) return false;
+        if (isset($filters['roomMax']) && $property->rooms > $filters['roomMax']) return false;
+
+        // Mərtəbə
+        if (isset($filters['floorMin']) && $property->floor < $filters['floorMin']) return false;
+        if (isset($filters['floorMax']) && $property->floor > $filters['floorMax']) return false;
 
         // Sahə
-        if (isset($filters['areaMin']) && $property->area < $filters['areaMin']) {
-            return false;
-        }
-        if (isset($filters['areaMax']) && $property->area > $filters['areaMax']) {
-            return false;
-        }
+        if (isset($filters['areaMin']) && $property->area < $filters['areaMin']) return false;
+        if (isset($filters['areaMax']) && $property->area > $filters['areaMax']) return false;
 
-        // Təmir
-        if (isset($filters['hasRepair']) && $filters['hasRepair'] && !$property->has_repair) {
-            return false;
-        }
-
-        // Yalnız mülkiyyətçi
-        if (!empty($filters['onlyOwner']) && $property->is_owner === false) {
-            return false;
-        }
+        // Boolean-lar
+        if (!empty($filters['hasMortgage'])   && !$property->has_mortgage)    return false;
+        if (!empty($filters['hasBillOfSale']) && !$property->has_bill_of_sale) return false;
+        if (!empty($filters['notFirstFloor']) && (int) $property->floor <= 1)  return false;
+        if (!empty($filters['notTopFloor'])   && $property->floor_total && (int) $property->floor >= $property->floor_total) return false;
+        if (!empty($filters['onlyTopFloor'])  && $property->floor_total && (int) $property->floor < $property->floor_total)  return false;
 
         return true;
     }

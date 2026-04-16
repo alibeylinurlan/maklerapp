@@ -27,9 +27,9 @@
                 </flux:navlist.item>
             </flux:navlist.group>
 
-            <flux:navlist.group heading="Müştərilər">
+            <flux:navlist.group heading="Müştərilərim">
                 <flux:navlist.item icon="users" :href="route('customers.index')" :current="request()->routeIs('customers.*')">
-                    Müştərilər
+                    Müştərilərim <em class="text-[10px] font-normal not-italic text-zinc-400 italic">alıcılar</em>
                 </flux:navlist.item>
                 <flux:navlist.item icon="clipboard-document-list" :href="route('customer-requests.index')" :current="request()->routeIs('customer-requests.*')">
                     İstəklər

@@ -32,7 +32,7 @@ new class extends Component {
 
     <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <flux:card class="!p-4">
-            <div class="text-sm text-zinc-500">Müştərilər</div>
+            <div class="text-sm text-zinc-500">Müştərilərim <em class="text-[10px] font-normal text-zinc-400 italic">(alıcılar)</em></div>
             <div class="mt-1 text-2xl font-bold">{{ $customerCount }}</div>
         </flux:card>
         <flux:card class="!p-4">

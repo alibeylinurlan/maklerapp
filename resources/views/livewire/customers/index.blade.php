@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\MatchRequestToExistingPropertiesJob;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\CustomerRequest;
@@ -7,17 +8,18 @@ use App\Models\Location;
 use App\Models\PropertyMatch;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
+use Livewire\Attributes\Url;
 
 new class extends Component {
     use WithPagination;
 
     // Left panel
     public string $search = '';
-    public ?int $selectedCustomerId = null;
+    #[Url] public ?int $selectedCustomerId = null;
 
     // Right panel
-    public string $rightTab = 'requests';
-    public string $matchStatus = 'new';
+    #[Url] public string $rightTab = 'requests';
+    #[Url] public string $matchStatus = 'new';
 
     // Customer form
     public bool $showCustomerForm = false;
@@ -37,12 +39,25 @@ new class extends Component {
     public string $rPriceMax = '';
     public string $rRoomMin = '';
     public string $rRoomMax = '';
+    public string $rFloorMin = '';
+    public string $rFloorMax = '';
     public string $rAreaMin = '';
     public string $rAreaMax = '';
+    public bool $rHasMortgage = false;
+    public bool $rHasBillOfSale = false;
+    public bool $rNotFirstFloor = false;
+    public bool $rNotTopFloor = false;
+    public bool $rOnlyTopFloor = false;
+    public string $rSearchScope = 'new_only'; // 'new_only' | 'all'
     public bool $rIsActive = true;
 
+    // Match bulk selection
+    public array $selectedMatchIds = [];
+
     public function updatedSearch(): void { $this->resetPage(); $this->selectedCustomerId = null; }
-    public function updatedRightTab(): void { $this->matchStatus = 'new'; }
+    public function updatedRightTab(): void { $this->matchStatus = 'new'; $this->selectedMatchIds = []; }
+    public function updatedMatchStatus(): void { $this->selectedMatchIds = []; }
+
 
     // ── Customer actions ──────────────────────────────────────────
 
@@ -106,7 +121,11 @@ new class extends Component {
 
     public function createRequest(): void
     {
-        $this->reset(['editingRequestId', 'rName', 'rCategoryId', 'rLocationIds', 'rPriceMin', 'rPriceMax', 'rRoomMin', 'rRoomMax', 'rAreaMin', 'rAreaMax']);
+        $this->reset(['editingRequestId', 'rName', 'rCategoryId', 'rLocationIds',
+            'rPriceMin', 'rPriceMax', 'rRoomMin', 'rRoomMax', 'rFloorMin', 'rFloorMax',
+            'rAreaMin', 'rAreaMax', 'rHasMortgage', 'rHasBillOfSale',
+            'rNotFirstFloor', 'rNotTopFloor', 'rOnlyTopFloor']);
+        $this->rSearchScope = 'new_only';
         $this->rIsActive = true;
         $this->showRequestForm = true;
     }
@@ -115,36 +134,57 @@ new class extends Component {
     {
         $req = CustomerRequest::where('user_id', auth()->id())->findOrFail($id);
         $this->editingRequestId = $req->id;
-        $this->rName       = $req->name;
-        $this->rIsActive   = $req->is_active;
+        $this->rName           = $req->name;
+        $this->rIsActive       = $req->is_active;
         $f = $req->filters;
-        $this->rCategoryId  = $f['categoryId'] ?? '';
-        $this->rLocationIds = $f['locationIds'] ?? [];
-        $this->rPriceMin    = $f['priceMin'] ?? '';
-        $this->rPriceMax    = $f['priceMax'] ?? '';
-        $this->rRoomMin     = $f['roomMin'] ?? '';
-        $this->rRoomMax     = $f['roomMax'] ?? '';
-        $this->rAreaMin     = $f['areaMin'] ?? '';
-        $this->rAreaMax     = $f['areaMax'] ?? '';
+        $this->rCategoryId     = $f['categoryId'] ?? '';
+        $this->rLocationIds    = array_map('strval', $f['locationIds'] ?? []);
+        $this->rPriceMin       = $f['priceMin'] ?? '';
+        $this->rPriceMax       = $f['priceMax'] ?? '';
+        $this->rRoomMin        = $f['roomMin'] ?? '';
+        $this->rRoomMax        = $f['roomMax'] ?? '';
+        $this->rFloorMin       = $f['floorMin'] ?? '';
+        $this->rFloorMax       = $f['floorMax'] ?? '';
+        $this->rAreaMin        = $f['areaMin'] ?? '';
+        $this->rAreaMax        = $f['areaMax'] ?? '';
+        $this->rHasMortgage    = $f['hasMortgage'] ?? false;
+        $this->rHasBillOfSale  = $f['hasBillOfSale'] ?? false;
+        $this->rNotFirstFloor  = $f['notFirstFloor'] ?? false;
+        $this->rNotTopFloor    = $f['notTopFloor'] ?? false;
+        $this->rOnlyTopFloor   = $f['onlyTopFloor'] ?? false;
+        $this->rSearchScope    = $f['searchScope'] ?? 'new_only';
         $this->showRequestForm = true;
     }
 
-    public function saveRequest(): void
+    public function saveRequest(string $nameFromClient = ''): void
     {
+        if ($nameFromClient !== '') $this->rName = $nameFromClient;
         $this->validate(['rName' => 'required|min:2|max:255']);
 
         $filters = array_filter([
-            'categoryId'  => $this->rCategoryId ?: null,
-            'locationIds' => !empty($this->rLocationIds) ? $this->rLocationIds : null,
-            'priceMin'    => $this->rPriceMin ? (int) $this->rPriceMin : null,
-            'priceMax'    => $this->rPriceMax ? (int) $this->rPriceMax : null,
-            'roomMin'     => $this->rRoomMin ? (int) $this->rRoomMin : null,
-            'roomMax'     => $this->rRoomMax ? (int) $this->rRoomMax : null,
-            'areaMin'     => $this->rAreaMin ? (int) $this->rAreaMin : null,
-            'areaMax'     => $this->rAreaMax ? (int) $this->rAreaMax : null,
+            'categoryId'    => $this->rCategoryId ?: null,
+            'locationIds'   => !empty($this->rLocationIds) ? $this->rLocationIds : null,
+            'priceMin'      => $this->rPriceMin ? (int) $this->rPriceMin : null,
+            'priceMax'      => $this->rPriceMax ? (int) $this->rPriceMax : null,
+            'roomMin'       => $this->rRoomMin ? (int) $this->rRoomMin : null,
+            'roomMax'       => $this->rRoomMax ? (int) $this->rRoomMax : null,
+            'floorMin'      => $this->rFloorMin ? (int) $this->rFloorMin : null,
+            'floorMax'      => $this->rFloorMax ? (int) $this->rFloorMax : null,
+            'areaMin'       => $this->rAreaMin ? (int) $this->rAreaMin : null,
+            'areaMax'       => $this->rAreaMax ? (int) $this->rAreaMax : null,
+            'hasMortgage'   => $this->rHasMortgage ?: null,
+            'hasBillOfSale' => $this->rHasBillOfSale ?: null,
+            'notFirstFloor' => $this->rNotFirstFloor ?: null,
+            'notTopFloor'   => $this->rNotTopFloor ?: null,
+            'onlyTopFloor'  => $this->rOnlyTopFloor ?: null,
+            'searchScope'   => $this->rSearchScope,
         ], fn($v) => $v !== null);
 
-        CustomerRequest::updateOrCreate(
+        if ($this->editingRequestId) {
+            PropertyMatch::where('customer_request_id', $this->editingRequestId)->delete();
+        }
+
+        $req = CustomerRequest::updateOrCreate(
             ['id' => $this->editingRequestId],
             [
                 'customer_id' => $this->selectedCustomerId,
@@ -155,13 +195,13 @@ new class extends Component {
             ]
         );
 
-        $this->showRequestForm = false;
-    }
+        if ($req->is_active && ($req->filters['searchScope'] ?? 'new_only') === 'all') {
+            MatchRequestToExistingPropertiesJob::dispatchSync($req->id);
+        }
 
-    public function toggleRequestActive(int $id): void
-    {
-        $req = CustomerRequest::where('user_id', auth()->id())->findOrFail($id);
-        $req->update(['is_active' => !$req->is_active]);
+        $this->showRequestForm = false;
+        $this->rightTab = 'matches';
+        $this->matchStatus = 'new';
     }
 
     public function deleteRequest(int $id): void
@@ -176,9 +216,35 @@ new class extends Component {
         PropertyMatch::where('user_id', auth()->id())->findOrFail($id)->update(['status' => 'viewed']);
     }
 
+    public function markInProgress(int $id): void
+    {
+        PropertyMatch::where('user_id', auth()->id())->findOrFail($id)->update(['status' => 'in_progress']);
+    }
+
     public function dismiss(int $id): void
     {
         PropertyMatch::where('user_id', auth()->id())->findOrFail($id)->update(['status' => 'dismissed']);
+    }
+
+    public function bulkMarkViewed(): void
+    {
+        if (empty($this->selectedMatchIds)) return;
+        PropertyMatch::where('user_id', auth()->id())->whereIn('id', $this->selectedMatchIds)->update(['status' => 'viewed']);
+        $this->selectedMatchIds = [];
+    }
+
+    public function bulkMarkInProgress(): void
+    {
+        if (empty($this->selectedMatchIds)) return;
+        PropertyMatch::where('user_id', auth()->id())->whereIn('id', $this->selectedMatchIds)->update(['status' => 'in_progress']);
+        $this->selectedMatchIds = [];
+    }
+
+    public function bulkDismiss(): void
+    {
+        if (empty($this->selectedMatchIds)) return;
+        PropertyMatch::where('user_id', auth()->id())->whereIn('id', $this->selectedMatchIds)->update(['status' => 'dismissed']);
+        $this->selectedMatchIds = [];
     }
 
     // ── Data ──────────────────────────────────────────────────────
@@ -213,7 +279,7 @@ new class extends Component {
         $selectedCustomer = null;
         $requests = collect();
         $matches = collect();
-        $matchCounts = ['new' => 0, 'viewed' => 0, 'dismissed' => 0];
+        $matchCounts = ['new' => 0, 'viewed' => 0, 'in_progress' => 0, 'dismissed' => 0];
 
         if ($this->selectedCustomerId) {
             $selectedCustomer = Customer::whereIn('user_id', $visibleUserIds)
@@ -239,9 +305,10 @@ new class extends Component {
                         ->paginate(20);
 
                     $matchCounts = [
-                        'new'       => PropertyMatch::where('user_id', auth()->id())->whereIn('customer_request_id', $requestIds)->where('status', 'new')->count(),
-                        'viewed'    => PropertyMatch::where('user_id', auth()->id())->whereIn('customer_request_id', $requestIds)->where('status', 'viewed')->count(),
-                        'dismissed' => PropertyMatch::where('user_id', auth()->id())->whereIn('customer_request_id', $requestIds)->where('status', 'dismissed')->count(),
+                        'new'         => PropertyMatch::where('user_id', auth()->id())->whereIn('customer_request_id', $requestIds)->where('status', 'new')->count(),
+                        'viewed'      => PropertyMatch::where('user_id', auth()->id())->whereIn('customer_request_id', $requestIds)->where('status', 'viewed')->count(),
+                        'in_progress' => PropertyMatch::where('user_id', auth()->id())->whereIn('customer_request_id', $requestIds)->where('status', 'in_progress')->count(),
+                        'dismissed'   => PropertyMatch::where('user_id', auth()->id())->whereIn('customer_request_id', $requestIds)->where('status', 'dismissed')->count(),
                     ];
                 }
             }
@@ -270,7 +337,7 @@ new class extends Component {
 
         {{-- Header --}}
         <div class="flex items-center justify-between px-3 py-3 border-b border-zinc-100 dark:border-zinc-800">
-            <span class="font-semibold text-sm text-zinc-700 dark:text-zinc-200">Müştərilər</span>
+            <span class="font-semibold text-sm text-zinc-700 dark:text-zinc-200">Müştərilərim <em class="text-[10px] font-normal text-zinc-400 italic">(alıcılar)</em></span>
             <flux:button wire:click="createCustomer" variant="primary" icon="plus" size="xs">Yeni</flux:button>
         </div>
 
@@ -402,7 +469,9 @@ new class extends Component {
                         : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200' }}">
                 Uyğunluqlar
                 @if($totalNew > 0)
-                    <span class="inline-flex items-center justify-center size-5 rounded-full bg-green-500 text-white text-xs font-bold">{{ $totalNew }}</span>
+                    <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-green-500 text-white text-xs font-bold leading-none">
+                        {{ $totalNew }}
+                    </span>
                 @endif
             </button>
         </div>
@@ -427,17 +496,12 @@ new class extends Component {
                         <div class="min-w-0">
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span class="font-semibold text-sm text-zinc-800 dark:text-zinc-200">{{ $req->name }}</span>
-                                @if($req->is_active)
-                                    <flux:badge size="sm" color="green">Aktiv</flux:badge>
-                                @else
-                                    <flux:badge size="sm" color="zinc">Dayandırılıb</flux:badge>
-                                @endif
                             </div>
 
                             {{-- Filters --}}
                             <div class="mt-2 flex flex-wrap gap-1">
                                 @if(!empty($req->filters['categoryId']))
-                                    <flux:badge size="sm" color="blue">{{ $categories->firstWhere('bina_id', $req->filters['categoryId'])?->name_az ?? $req->filters['categoryId'] }}</flux:badge>
+                                    <flux:badge size="sm" color="blue">{{ $categories->firstWhere('id', $req->filters['categoryId'])?->name_az ?? $req->filters['categoryId'] }}</flux:badge>
                                 @endif
                                 @if(!empty($req->filters['priceMin']) || !empty($req->filters['priceMax']))
                                     <flux:badge size="sm" color="green">{{ $req->filters['priceMin'] ?? '0' }}-{{ $req->filters['priceMax'] ?? '∞' }} AZN</flux:badge>
@@ -449,7 +513,7 @@ new class extends Component {
                                     <flux:badge size="sm" color="amber">{{ $req->filters['areaMin'] ?? '0' }}-{{ $req->filters['areaMax'] ?? '∞' }} m²</flux:badge>
                                 @endif
                                 @if(!empty($req->filters['locationIds']))
-                                    <flux:badge size="sm" color="zinc">{{ count($req->filters['locationIds']) }} ərazi</flux:badge>
+                                    <flux:badge size="sm" color="zinc">{{ count((array)($req->filters['locationIds'] ?? [])) }} ərazi</flux:badge>
                                 @endif
                             </div>
                         </div>
@@ -466,7 +530,6 @@ new class extends Component {
                                 @endif
                             </button>
 
-                            <flux:button wire:click="toggleRequestActive({{ $req->id }})" size="xs" variant="ghost" icon="{{ $req->is_active ? 'pause' : 'play' }}" />
                             <flux:button wire:click="editRequest({{ $req->id }})" size="xs" variant="ghost" icon="pencil-square" />
                             <flux:button wire:click="deleteRequest({{ $req->id }})" wire:confirm="Bu istəyi silmək istəyirsiniz?" size="xs" variant="ghost" icon="trash" class="text-red-500" />
                         </div>
@@ -482,17 +545,38 @@ new class extends Component {
         @if($rightTab === 'matches')
         <div class="flex-1 p-6 overflow-y-auto">
             {{-- Status filter --}}
-            <div class="flex gap-1 mb-4">
+            <div class="flex flex-wrap gap-1 mb-4">
                 <flux:button wire:click="$set('matchStatus', 'new')" variant="{{ $matchStatus === 'new' ? 'primary' : 'ghost' }}" size="sm">
                     Yeni ({{ $matchCounts['new'] }})
                 </flux:button>
                 <flux:button wire:click="$set('matchStatus', 'viewed')" variant="{{ $matchStatus === 'viewed' ? 'primary' : 'ghost' }}" size="sm">
                     Baxılıb ({{ $matchCounts['viewed'] }})
                 </flux:button>
+                <flux:button wire:click="$set('matchStatus', 'in_progress')" variant="{{ $matchStatus === 'in_progress' ? 'primary' : 'ghost' }}" size="sm">
+                    Nəzarətdə ({{ $matchCounts['in_progress'] }})
+                </flux:button>
                 <flux:button wire:click="$set('matchStatus', 'dismissed')" variant="{{ $matchStatus === 'dismissed' ? 'primary' : 'ghost' }}" size="sm">
                     Keçildi ({{ $matchCounts['dismissed'] }})
                 </flux:button>
             </div>
+
+            {{-- Bulk action bar --}}
+            @if(count($selectedMatchIds) > 0)
+            <div class="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800">
+                <span class="text-sm font-medium text-indigo-700 dark:text-indigo-300">{{ count($selectedMatchIds) }} seçilib</span>
+                <div class="flex gap-1 ml-auto">
+                    @if($matchStatus !== 'viewed')
+                    <flux:button wire:click="bulkMarkViewed" size="xs" variant="ghost" icon="eye">Baxıldı</flux:button>
+                    @endif
+                    @if($matchStatus !== 'in_progress')
+                    <flux:button wire:click="bulkMarkInProgress" size="xs" variant="ghost" icon="clock">Nəzarətdə</flux:button>
+                    @endif
+                    @if($matchStatus !== 'dismissed')
+                    <flux:button wire:click="bulkDismiss" size="xs" variant="ghost" icon="x-mark" class="text-red-500">Keç</flux:button>
+                    @endif
+                </div>
+            </div>
+            @endif
 
             @if($matches instanceof \Illuminate\Pagination\LengthAwarePaginator ? $matches->isEmpty() : $matches->isEmpty())
             <div class="flex flex-col items-center justify-center gap-2 py-16 text-zinc-400">
@@ -502,10 +586,21 @@ new class extends Component {
             @else
             <div class="space-y-3">
                 @foreach($matches as $match)
-                <div class="flex gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3">
+                <div class="flex gap-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3
+                    {{ in_array($match->id, $selectedMatchIds) ? 'ring-2 ring-indigo-400' : '' }}">
+
+                    {{-- Checkbox --}}
+                    <div class="flex items-start pt-1">
+                        <input type="checkbox"
+                               wire:model.live="selectedMatchIds"
+                               value="{{ $match->id }}"
+                               class="size-4 rounded border-zinc-300 dark:border-zinc-600 text-indigo-600 cursor-pointer">
+                    </div>
+
                     {{-- Photo --}}
-                    @if($match->property?->photos && count($match->property->photos) > 0)
-                        <img src="{{ $match->property->photos[0] }}" alt="" class="h-16 w-24 rounded-lg object-cover shrink-0" loading="lazy">
+                    @php($thumb = $match->property?->photos[0]['thumb'] ?? $match->property?->photos[0]['medium'] ?? null)
+                    @if($thumb)
+                        <img src="{{ $thumb }}" alt="" class="h-16 w-24 rounded-lg object-cover shrink-0" loading="lazy">
                     @else
                         <div class="flex h-16 w-24 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-400 shrink-0">Şəkil yox</div>
                     @endif
@@ -534,15 +629,18 @@ new class extends Component {
                                 <a href="{{ $match->property?->full_url }}" target="_blank">
                                     <flux:button size="xs" variant="ghost" icon="arrow-top-right-on-square" />
                                 </a>
-                                @if($match->status === 'new')
-                                    <flux:button wire:click="markViewed({{ $match->id }})" size="xs" variant="ghost" icon="eye" />
+                                @if($match->status !== 'viewed')
+                                    <flux:button wire:click="markViewed({{ $match->id }})" size="xs" variant="ghost" icon="eye" title="Baxıldı" />
+                                @endif
+                                @if($match->status !== 'in_progress')
+                                    <flux:button wire:click="markInProgress({{ $match->id }})" size="xs" variant="ghost" icon="clock" title="Nəzarətdə" />
                                 @endif
                                 @if($match->status !== 'dismissed')
-                                    <flux:button wire:click="dismiss({{ $match->id }})" size="xs" variant="ghost" icon="x-mark" class="text-red-500" />
+                                    <flux:button wire:click="dismiss({{ $match->id }})" size="xs" variant="ghost" icon="x-mark" class="text-red-500" title="Keç" />
                                 @endif
                             </div>
                         </div>
-                        <div class="mt-1 text-xs text-zinc-400">{{ $match->created_at->diffForHumans() }}</div>
+                        <div class="mt-1 text-xs text-zinc-400">{{ ($match->property?->bumped_at ?? $match->property?->created_at)?->diffForHumans() }}</div>
                     </div>
                 </div>
                 @endforeach
@@ -604,54 +702,153 @@ new class extends Component {
 </flux:modal>
 
 {{-- Request form --}}
-<flux:modal wire:model="showRequestForm" class="max-w-2xl">
+<flux:modal wire:model="showRequestForm" class="max-w-3xl">
     <flux:heading>{{ $editingRequestId ? 'İstəyi redaktə' : 'Yeni istək' }}</flux:heading>
-    <form wire:submit="saveRequest" class="mt-4 space-y-4">
-        <div class="grid grid-cols-2 gap-4">
-            <flux:input wire:model="rName" label="İstək adı" placeholder="Məs: Yasamal 2 otaq" required />
-            <flux:select wire:model="rCategoryId" label="Kateqoriya">
-                <flux:select.option value="">Hamısı</flux:select.option>
-                @foreach($categories as $cat)
-                    <flux:select.option value="{{ $cat->bina_id }}">{{ $cat->name_az }}</flux:select.option>
-                @endforeach
-            </flux:select>
-        </div>
+    <form class="mt-4 space-y-4"
+          x-data="{
+              autoName: {{ $editingRequestId ? 'false' : 'true' }},
+              localName: @js($rName),
+              cats: @js($categories->pluck('name_az', 'id')),
+              locs: @js($locations->pluck('name_az', 'id')),
 
+              init() {
+                  // Modal açılanda Livewire-dan adı sinxronlaşdır
+                  $wire.$watch('showRequestForm', (open) => {
+                      if (open) {
+                          this.localName = $wire.rName || '';
+                          this.autoName  = !$wire.editingRequestId;
+                      }
+                  });
+                  // Filter dəyişəndə adı yenilə (yalnız auto rejimdə)
+                  const watched = ['rCategoryId','rLocationIds','rRoomMin','rRoomMax',
+                                   'rPriceMin','rPriceMax','rFloorMin','rFloorMax',
+                                   'rAreaMin','rAreaMax','rHasMortgage','rHasBillOfSale',
+                                   'rNotFirstFloor','rNotTopFloor','rOnlyTopFloor'];
+                  watched.forEach(p => $wire.$watch(p, () => { if (this.autoName) this.generate(); }));
+              },
+
+              generate() {
+                  const parts = [];
+                  const catId = $wire.rCategoryId;
+                  if (catId && this.cats[catId]) parts.push(this.cats[catId]);
+
+                  const locIds = $wire.rLocationIds || [];
+                  const locNames = locIds.map(id => this.locs[id]).filter(Boolean);
+                  if (locNames.length) parts.push(locNames.join(', '));
+
+                  const rMin = $wire.rRoomMin, rMax = $wire.rRoomMax;
+                  if (rMin || rMax) {
+                      if (rMin && rMax) parts.push(rMin == rMax ? rMin+' otaq' : rMin+'-'+rMax+' otaq');
+                      else if (rMin) parts.push(rMin+'+ otaq');
+                      else parts.push(rMax+' otaq');
+                  }
+
+                  const pMin = $wire.rPriceMin, pMax = $wire.rPriceMax;
+                  if (pMin || pMax) {
+                      const fmt = n => Number(n).toLocaleString('az-AZ');
+                      if (pMin && pMax) parts.push(fmt(pMin)+'-'+fmt(pMax)+' AZN');
+                      else if (pMax) parts.push(fmt(pMax)+' AZN-ə qədər');
+                      else parts.push(fmt(pMin)+' AZN-dən');
+                  }
+
+                  const fMin = $wire.rFloorMin, fMax = $wire.rFloorMax;
+                  if (fMin || fMax) {
+                      if (fMin && fMax) parts.push(fMin+'-'+fMax+' mərtəbə');
+                      else if (fMin) parts.push(fMin+'+ mərtəbə');
+                      else parts.push(fMax+' mərtəbəyə qədər');
+                  }
+
+                  const aMin = $wire.rAreaMin, aMax = $wire.rAreaMax;
+                  if (aMin || aMax) {
+                      if (aMin && aMax) parts.push(aMin+'-'+aMax+' m²');
+                      else if (aMin) parts.push(aMin+'+ m²');
+                      else parts.push(aMax+' m²-ə qədər');
+                  }
+
+                  const flags = [];
+                  if ($wire.rHasBillOfSale) flags.push('çıxarış');
+                  if ($wire.rHasMortgage)   flags.push('ipoteka');
+                  if ($wire.rNotFirstFloor) flags.push('1-ci olmasın');
+                  if ($wire.rNotTopFloor)   flags.push('ən üst olmasın');
+                  if ($wire.rOnlyTopFloor)  flags.push('yalnız ən üst');
+                  if (flags.length) parts.push(flags.join(', '));
+
+                  this.localName = parts.join(', ');
+              },
+
+              resetAuto() {
+                  this.autoName = true;
+                  this.generate();
+              },
+
+              handleSubmit() {
+                  $wire.saveRequest(this.localName);
+              }
+          }"
+          @submit.prevent="handleSubmit()">
+
+        {{-- İstək adı --}}
         <div>
-            <flux:heading size="sm" class="mb-1">Ərazilər</flux:heading>
-            @if(!empty($rLocationIds))
-            <div class="mb-1 flex flex-wrap gap-1">
-                @foreach($rLocationIds as $locBinaId)
-                    @php($loc = $locations->firstWhere('bina_id', $locBinaId))
-                    @if($loc)
-                    <flux:badge size="sm">
-                        {{ $loc->name_az }}
-                        <flux:badge.close wire:click="$set('rLocationIds', {{ json_encode(array_values(array_diff($rLocationIds, [$locBinaId]))) }})" class="cursor-pointer" />
-                    </flux:badge>
-                    @endif
-                @endforeach
+            <div class="flex items-center justify-between mb-1">
+                <flux:label>İstək adı</flux:label>
+                <span x-show="autoName" class="flex items-center gap-1 text-xs text-emerald-500">
+                    <flux:icon.sparkles class="size-3" />
+                    Avtomatik
+                </span>
+                <button x-show="!autoName" type="button" @click="resetAuto()"
+                        class="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 transition-colors">
+                    <flux:icon.arrow-path class="size-3" />
+                    Avtomatik
+                </button>
             </div>
-            @endif
-            <flux:select wire:model.live="rLocationIds" multiple searchable placeholder="Ərazi seçin...">
-                @foreach($locations as $loc)
-                    <flux:select.option value="{{ $loc->bina_id }}">{{ $loc->name_az }}</flux:select.option>
-                @endforeach
-            </flux:select>
+            <flux:input x-model="localName" @input="autoName = false"
+                        placeholder="Filtrləri seçin..." required />
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-            <flux:input wire:model="rPriceMin" label="Min qiymət (AZN)" type="number" />
-            <flux:input wire:model="rPriceMax" label="Max qiymət (AZN)" type="number" />
+        {{-- Axtarış əhatəsi --}}
+        <div>
+            <flux:label class="mb-1.5">Axtarış əhatəsi</flux:label>
+            <div class="flex gap-3">
+                <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 transition"
+                       :class="$wire.rSearchScope === 'new_only' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300'">
+                    <input type="radio" wire:model.live="rSearchScope" value="new_only" class="text-indigo-600">
+                    <div>
+                        <div class="text-sm font-medium text-zinc-800 dark:text-zinc-200">Yalnız yeni paylaşılanlar</div>
+                        <div class="text-xs text-zinc-500">İstək yaradıldıqdan sonra gələn elanlar</div>
+                    </div>
+                </label>
+                <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 transition"
+                       :class="$wire.rSearchScope === 'all' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300'">
+                    <input type="radio" wire:model.live="rSearchScope" value="all" class="text-indigo-600">
+                    <div>
+                        <div class="text-sm font-medium text-zinc-800 dark:text-zinc-200">Bütün elanlar</div>
+                        <div class="text-xs text-zinc-500">Mövcud + yeni paylaşılanlar</div>
+                    </div>
+                </label>
+            </div>
         </div>
-        <div class="grid grid-cols-2 gap-4">
-            <flux:input wire:model="rRoomMin" label="Min otaq" type="number" min="1" max="10" />
-            <flux:input wire:model="rRoomMax" label="Max otaq" type="number" min="1" max="10" />
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-            <flux:input wire:model="rAreaMin" label="Min sahə (m²)" type="number" />
-            <flux:input wire:model="rAreaMax" label="Max sahə (m²)" type="number" />
-        </div>
-        <flux:checkbox wire:model="rIsActive" label="Aktiv" />
+
+        @include('livewire.partials.filter-fields', [
+            'categories' => $categories,
+            'locations'  => $locations,
+            'f' => [
+                'category'      => 'rCategoryId',
+                'locationIds'   => 'rLocationIds',
+                'roomMin'       => 'rRoomMin',
+                'roomMax'       => 'rRoomMax',
+                'priceMin'      => 'rPriceMin',
+                'priceMax'      => 'rPriceMax',
+                'floorMin'      => 'rFloorMin',
+                'floorMax'      => 'rFloorMax',
+                'areaMin'       => 'rAreaMin',
+                'areaMax'       => 'rAreaMax',
+                'hasMortgage'   => 'rHasMortgage',
+                'hasBillOfSale' => 'rHasBillOfSale',
+                'notFirstFloor' => 'rNotFirstFloor',
+                'notTopFloor'   => 'rNotTopFloor',
+                'onlyTopFloor'  => 'rOnlyTopFloor',
+            ],
+        ])
 
         <div class="flex justify-end gap-2">
             <flux:button wire:click="$set('showRequestForm', false)" variant="ghost">Ləğv et</flux:button>

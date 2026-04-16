@@ -14,6 +14,7 @@ class CustomerRequest extends Model
         'name',
         'filters',
         'is_active',
+        'in_progress',
         'priority',
         'last_matched_at',
     ];
@@ -23,6 +24,7 @@ class CustomerRequest extends Model
         return [
             'filters' => 'array',
             'is_active' => 'boolean',
+            'in_progress' => 'boolean',
             'priority' => 'integer',
             'last_matched_at' => 'datetime',
         ];

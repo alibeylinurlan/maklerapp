@@ -13,7 +13,8 @@ new class extends Component {
     #[Url] public string $search = '';
     #[Url] public string $categoryId = '';
     #[Url] public array $locationIds = [];
-    #[Url] public string $rooms = '';
+    #[Url] public string $roomMin = '';
+    #[Url] public string $roomMax = '';
     #[Url] public string $priceMin = '';
     #[Url] public string $priceMax = '';
     #[Url] public string $floorMin = '';
@@ -39,7 +40,7 @@ new class extends Component {
 
     public function clearFilters(): void
     {
-        $this->reset(['search', 'categoryId', 'locationIds', 'rooms', 'priceMin', 'priceMax',
+        $this->reset(['search', 'categoryId', 'locationIds', 'roomMin', 'roomMax', 'priceMin', 'priceMax',
             'floorMin', 'floorMax', 'areaMin', 'areaMax', 'hasMortgage', 'hasBillOfSale',
             'notFirstFloor', 'notTopFloor', 'onlyTopFloor']);
         $this->resetPage();
@@ -47,7 +48,7 @@ new class extends Component {
 
     public function hasActiveFilters(): bool
     {
-        return $this->search || $this->categoryId || !empty($this->locationIds) || $this->rooms
+        return $this->search || $this->categoryId || !empty($this->locationIds) || $this->roomMin || $this->roomMax
             || $this->priceMin || $this->priceMax || $this->floorMin || $this->floorMax
             || $this->areaMin || $this->areaMax || $this->hasMortgage || $this->hasBillOfSale
             || $this->notFirstFloor || $this->notTopFloor || $this->onlyTopFloor;
@@ -69,8 +70,11 @@ new class extends Component {
         if (!empty($this->locationIds)) {
             $query->whereIn('location_id', $this->locationIds);
         }
-        if ($this->rooms) {
-            $query->where('rooms', $this->rooms);
+        if ($this->roomMin) {
+            $query->where('rooms', '>=', $this->roomMin);
+        }
+        if ($this->roomMax) {
+            $query->where('rooms', '<=', $this->roomMax);
         }
         if ($this->priceMin) {
             $query->where('price', '>=', $this->priceMin);
@@ -139,123 +143,32 @@ new class extends Component {
         <!--<flux:badge>{{ $totalCount }} mülkiyyətçi elanı</flux:badge>-->
     </div>
 
-    {{-- Filtrlər — bir sətirdə kompakt --}}
-    <div class="mt-4 flex flex-wrap items-end gap-2">
-        <div class="w-40">
-            <flux:select wire:model="categoryId" placeholder="Kateqoriya" size="sm">
-                <flux:select.option value="">Kateqoriya</flux:select.option>
-                @foreach($categories as $cat)
-                    <flux:select.option value="{{ $cat->id }}">{{ $cat->name_az }}</flux:select.option>
-                @endforeach
-            </flux:select>
+    {{-- Filtrlər --}}
+    <div class="mt-4">
+        @include('livewire.partials.filter-fields', [
+            'categories' => $categories,
+            'locations'  => $locations,
+            'f' => [
+                'category'      => 'categoryId',
+                'locationIds'   => 'locationIds',
+                'roomMin'       => 'roomMin',
+                'roomMax'       => 'roomMax',
+                'priceMin'      => 'priceMin',
+                'priceMax'      => 'priceMax',
+                'floorMin'      => 'floorMin',
+                'floorMax'      => 'floorMax',
+                'areaMin'       => 'areaMin',
+                'areaMax'       => 'areaMax',
+                'hasMortgage'   => 'hasMortgage',
+                'hasBillOfSale' => 'hasBillOfSale',
+                'notFirstFloor' => 'notFirstFloor',
+                'notTopFloor'   => 'notTopFloor',
+                'onlyTopFloor'  => 'onlyTopFloor',
+            ],
+        ])
+        <div class="mt-2">
+            <flux:button wire:click="filter" variant="primary" size="sm" icon="funnel">Filtrlə</flux:button>
         </div>
-
-        {{-- Ərazi multi-select --}}
-        <div x-data="{
-            open: false,
-            search: '',
-            locations: {{ Js::from($locations->map(fn($l) => ['id' => (string)$l->id, 'name' => $l->name_az])) }},
-            get filtered() {
-                if (!this.search) return this.locations;
-                const s = this.search.toLowerCase();
-                return this.locations.filter(l => l.name.toLowerCase().includes(s));
-            },
-            toggle(id) {
-                const ids = [...$wire.locationIds];
-                const idx = ids.indexOf(id);
-                if (idx > -1) { ids.splice(idx, 1); } else { ids.push(id); }
-                $wire.set('locationIds', ids);
-            },
-            isSelected(id) { return $wire.locationIds.includes(id); }
-        }" class="relative w-44" @keydown.escape="open = false">
-            <button type="button" @click="open = !open"
-                class="relative flex h-8 w-full items-center justify-between rounded-md border border-zinc-200 bg-white pl-2.5 pr-7 text-left text-sm shadow-xs outline-none transition hover:border-zinc-300 dark:border-zinc-600 dark:bg-zinc-800"
-            >
-                <span :class="$wire.locationIds.length ? 'text-zinc-800 dark:text-zinc-200' : 'text-zinc-400'"
-                    x-text="$wire.locationIds.length ? $wire.locationIds.length + ' ərazi' : 'Ərazi'" class="truncate text-xs">
-                </span>
-                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1.5">
-                    <flux:icon.chevron-up-down class="size-3.5 text-zinc-400" />
-                </span>
-            </button>
-
-            <div x-show="open" @click.away="open = false" x-transition.opacity
-                class="absolute z-50 mt-1 max-h-60 w-56 overflow-hidden rounded-md border border-zinc-200 bg-white shadow-lg dark:border-zinc-600 dark:bg-zinc-800"
-            >
-                <div class="border-b border-zinc-100 p-1.5 dark:border-zinc-700">
-                    <input x-model="search" type="text" placeholder="Axtar..."
-                        class="w-full rounded border-0 bg-zinc-50 px-2 py-1 text-xs outline-none placeholder:text-zinc-400 focus:ring-0 dark:bg-zinc-700 dark:text-white"
-                        @click.stop
-                    />
-                </div>
-                <div class="max-h-44 overflow-y-auto">
-                    <template x-for="loc in filtered" :key="loc.id">
-                        <button type="button" @click.stop="toggle(loc.id)"
-                            :class="isSelected(loc.id) ? 'bg-zinc-100 dark:bg-zinc-700' : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'"
-                            class="flex w-full items-center gap-2 px-2.5 py-1 text-left text-xs transition"
-                        >
-                            <span :class="isSelected(loc.id) ? 'bg-indigo-600 border-indigo-600' : 'border-zinc-300 dark:border-zinc-500'"
-                                class="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border transition"
-                            >
-                                <svg x-show="isSelected(loc.id)" class="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                            </span>
-                            <span x-text="loc.name" class="text-zinc-700 dark:text-zinc-300"></span>
-                        </button>
-                    </template>
-                </div>
-            </div>
-        </div>
-
-        <div class="w-28">
-            <flux:select wire:model="rooms" placeholder="Otaq" size="sm">
-                <flux:select.option value="">Otaq</flux:select.option>
-                @for($i = 1; $i <= 6; $i++)
-                    <flux:select.option value="{{ $i }}">{{ $i }} otaq</flux:select.option>
-                @endfor
-            </flux:select>
-        </div>
-
-        <div class="w-28">
-            <flux:input wire:model="priceMin" placeholder="Min ₼" type="number" size="sm" />
-        </div>
-        <div class="w-28">
-            <flux:input wire:model="priceMax" placeholder="Max ₼" type="number" size="sm" />
-        </div>
-
-        <div class="w-24">
-            <flux:input wire:model="floorMin" placeholder="Mərt. min" type="number" size="sm" min="1" />
-        </div>
-        <div class="w-24">
-            <flux:input wire:model="floorMax" placeholder="Mərt. max" type="number" size="sm" min="1" />
-        </div>
-
-        <div class="w-24">
-            <flux:input wire:model="areaMin" placeholder="m² min" type="number" size="sm" min="1" />
-        </div>
-        <div class="w-24">
-            <flux:input wire:model="areaMax" placeholder="m² maks" type="number" size="sm" min="1" />
-        </div>
-
-        <flux:button wire:click="filter" variant="primary" size="sm" icon="funnel">Filtrlə</flux:button>
-    </div>
-
-    {{-- Boolean filtrlər --}}
-    <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-        @foreach([
-            ['field' => 'hasBillOfSale',  'label' => 'Çıxarış var'],
-            ['field' => 'hasMortgage',    'label' => 'İpoteka var'],
-            ['field' => 'notFirstFloor',  'label' => '1-ci olmasın'],
-            ['field' => 'notTopFloor',    'label' => 'Ən üst olmasın'],
-            ['field' => 'onlyTopFloor',   'label' => 'Yalnız ən üst'],
-        ] as $opt)
-        <label class="flex cursor-pointer items-center gap-1.5 select-none">
-            <input type="checkbox"
-                wire:model="{{ $opt['field'] }}"
-                class="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-600 dark:bg-zinc-800"
-            />
-            <span class="text-sm text-zinc-700 dark:text-zinc-300">{{ $opt['label'] }}</span>
-        </label>
-        @endforeach
     </div>
 
     {{-- Aktiv filtrlər badge-ları --}}
@@ -280,16 +193,16 @@ new class extends Component {
             @endif
         @endforeach
 
-        @if($rooms)
+        @if($this->roomMin || $this->roomMax)
             <flux:badge size="sm" color="green">
-                {{ $rooms }} otaq
-                <flux:badge.close wire:click="$set('rooms', '')" class="cursor-pointer" />
+                {{ $this->roomMin ?: '1' }}-{{ $this->roomMax ?: '∞' }} otaq
+                <flux:badge.close wire:click="$set('roomMin', ''); $set('roomMax', '')" class="cursor-pointer" />
             </flux:badge>
         @endif
 
-        @if($priceMin || $priceMax)
+        @if($this->priceMin || $this->priceMax)
             <flux:badge size="sm" color="amber">
-                {{ $priceMin ?: '0' }} - {{ $priceMax ?: '∞' }} AZN
+                {{ $this->priceMin ?: '0' }} - {{ $this->priceMax ?: '∞' }} AZN
                 <flux:badge.close wire:click="$set('priceMin', ''); $set('priceMax', '')" class="cursor-pointer" />
             </flux:badge>
         @endif
