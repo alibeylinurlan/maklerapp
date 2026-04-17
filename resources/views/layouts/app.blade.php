@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'Makler' }}</title>
+    <title>{{ $title ?? 'Binokl' }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @fluxAppearance
 </head>
@@ -14,8 +14,9 @@
         <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
         <a href="{{ route('dashboard') }}" class="flex items-center gap-2 px-2 py-3">
-            <flux:icon.home-modern class="size-6 text-indigo-600" />
-            <span class="text-lg font-bold text-zinc-800 dark:text-white">Makler</span>
+            <span class="logo-light text-xl leading-none text-zinc-900 tracking-tighter select-none">◉◉</span>
+            <span class="logo-dark text-xl leading-none text-white tracking-tighter select-none">◎◎</span>
+            <span class="text-lg font-bold text-zinc-800 dark:text-white">Binokl</span>
         </a>
 
         @php
@@ -98,7 +99,9 @@
     <flux:main>
         <div class="flex items-center gap-3 mb-6 lg:hidden">
             <flux:sidebar.toggle icon="bars-3" class="lg:hidden" />
-            <span class="text-lg font-bold">Makler</span>
+            <span class="logo-light text-xl leading-none text-zinc-900 tracking-tighter select-none">◉◉</span>
+            <span class="logo-dark text-xl leading-none text-white tracking-tighter select-none">◎◎</span>
+            <span class="text-lg font-bold">Binokl</span>
         </div>
 
         {{ $slot }}

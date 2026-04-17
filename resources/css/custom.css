@@ -1,5 +1,10 @@
 [x-cloak] { display: none !important; }
 
+.logo-light { display: inline; }
+.logo-dark  { display: none; }
+.dark .logo-light { display: none; }
+.dark .logo-dark  { display: inline; }
+
 @keyframes softBlink {
     0%, 100% {
         opacity: 1;
