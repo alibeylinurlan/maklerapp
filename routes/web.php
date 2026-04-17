@@ -19,6 +19,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/customer-requests', fn() => redirect()->route('customers.index'))->name('customer-requests.index');
     Route::get('/matches', fn() => redirect()->route('customers.index'))->name('matches.index');
     Volt::route('/pricing', 'pricing')->name('pricing');
+    Volt::route('/settings', 'settings.index')->name('settings');
 
     // Developer test route
     Route::post('/dev/test-socket', function () {

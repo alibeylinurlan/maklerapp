@@ -74,6 +74,12 @@
 
         <flux:spacer />
 
+        <flux:navlist variant="outline">
+            <flux:navlist.item icon="cog-6-tooth" :href="route('settings')" :current="request()->routeIs('settings')">
+                Tənzimləmələr
+            </flux:navlist.item>
+        </flux:navlist>
+
         <form method="POST" action="{{ route('logout') }}">
             @csrf
             <flux:navlist variant="outline">
