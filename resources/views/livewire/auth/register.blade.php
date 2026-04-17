@@ -38,7 +38,7 @@ new class extends Component {
 <div class="flex min-h-screen items-center justify-center bg-zinc-100 dark:bg-zinc-900 px-4">
     <div class="w-full max-w-md">
         <div class="mb-8 text-center">
-            <h1 class="text-3xl font-bold text-zinc-800 dark:text-white">Makler</h1>
+            <h1 class="text-3xl font-bold text-zinc-800 dark:text-white">Binokl.az</h1>
             <p class="mt-2 text-zinc-500">Yeni hesab yaradın</p>
         </div>
 

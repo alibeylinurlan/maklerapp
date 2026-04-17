@@ -35,7 +35,7 @@ new class extends Component {
     </div>
 
     {{-- FEED --}}
-    <div class="flex-1 overflow-x-auto overflow-y-hidden pb-4">
+    <div class="flex-1 overflow-x-auto overflow-y-hidden">
         <div class="flex gap-2 px-3 py-2 h-full items-stretch"
              style="width: max-content; min-width: 100%;">
 
@@ -151,7 +151,7 @@ function liveFeedH(initialMaxId) {
                 setTimeout(() => {
                     const found = this.items.find(i => i.id === item.id);
                     if (found) found.isNew = false;
-                }, 5000);
+                }, 30000);
             }
         },
 

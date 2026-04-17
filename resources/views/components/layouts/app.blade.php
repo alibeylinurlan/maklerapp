@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $title ?? 'Makler' }}</title>
+    <title>{{ $title ?? 'Binokl.az' }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @fluxAppearance
 </head>
@@ -14,7 +14,7 @@
 
         <a href="{{ route('dashboard') }}" class="flex items-center gap-2 px-2 py-3">
             <flux:icon.home-modern class="size-6 text-indigo-600" />
-            <span class="text-lg font-bold text-zinc-800 dark:text-white">Makler</span>
+            <span class="text-lg font-bold text-zinc-800 dark:text-white">Binokl.az</span>
         </a>
 
         <flux:navlist variant="outline">
@@ -57,7 +57,7 @@
     <flux:main>
         <div class="flex items-center gap-3 mb-6 lg:hidden">
             <flux:sidebar.toggle icon="bars-3" class="lg:hidden" />
-            <span class="text-lg font-bold">Makler</span>
+            <span class="text-lg font-bold">Binokl.az</span>
         </div>
 
         {{ $slot }}

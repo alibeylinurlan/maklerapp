@@ -249,7 +249,7 @@ function liveFeed(initialMaxId) {
                 setTimeout(() => {
                     const found = this.items.find(i => i.id === item.id);
                     if (found) found.isNew = false;
-                }, 5000);
+                }, 30000);
             }
         },
 
