@@ -31,7 +31,7 @@ new class extends Component {
             </span>
         </div>
 
-        @if(auth()->user()->hasAnyRole(['developer',]))
+        @if(auth()->user()->hasAnyRole(['developer']))
         <button @click="sendTest()"
                 class="rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30 transition-colors">
             Test
@@ -292,12 +292,24 @@ function liveFeed(initialMaxId) {
         },
 
         sendTest() {
-            fetch('/dev/test-socket', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || ''
-                },
-            });
+            const colors = ['#4f46e5','#0891b2','#059669','#d97706','#dc2626','#7c3aed','#db2777','#0284c7'];
+            const bg = colors[Math.floor(Math.random() * colors.length)];
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200"><rect width="300" height="200" fill="${bg}"/><rect x="110" y="80" width="80" height="60" rx="4" fill="rgba(255,255,255,0.15)"/><polygon points="100,85 150,45 200,85" fill="rgba(255,255,255,0.2)"/></svg>`;
+            const thumb = 'data:image/svg+xml;base64,' + btoa(svg);
+            const locations = ['Bakı, Nəsimi r.', 'Bakı, Yasamal r.', 'Bakı, Sabunçu r.', 'Bakı, Xətai r.', 'Bakı, Binəqədi r.'];
+            this.addItem({
+                id: 999000 + Math.floor(Math.random() * 999),
+                price: new Intl.NumberFormat().format(Math.floor(Math.random() * 160000) + 40000) + ' ₼',
+                rooms: Math.floor(Math.random() * 5) + 1,
+                area: Math.floor(Math.random() * 110) + 40,
+                floor: Math.floor(Math.random() * 12) + 1,
+                floor_total: 16,
+                location: locations[Math.floor(Math.random() * locations.length)],
+                category: 'Mənzil',
+                thumb,
+                url: '#',
+                created_at: new Date().toISOString(),
+            }, true);
         }
     };
 }
