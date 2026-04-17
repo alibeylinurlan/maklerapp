@@ -1,3 +1,5 @@
+[x-cloak] { display: none !important; }
+
 @keyframes softBlink {
     0%, 100% {
         opacity: 1;

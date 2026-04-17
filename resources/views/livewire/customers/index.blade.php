@@ -62,7 +62,7 @@ new class extends Component {
 
     public function selectCustomer(int $id): void
     {
-        $this->selectedCustomerId = $this->selectedCustomerId === $id ? null : $id;
+        $this->selectedCustomerId = $id;
         $this->selectedRequestId = null;
         $this->matchStatus = 'new';
     }
@@ -384,14 +384,10 @@ new class extends Component {
                         @endif
                     </div>
                     <div class="flex flex-col items-end gap-1 shrink-0">
-                        <span wire:loading wire:target="selectCustomer({{ $customer->id }})"
-                              class="inline-flex items-center justify-center size-5">
-                            <flux:icon.arrow-path class="size-4 animate-spin text-indigo-400" />
-                        </span>
-                        <span wire:loading.remove wire:target="selectCustomer({{ $customer->id }})" class="flex flex-col items-end gap-1">
+                        <span class="flex flex-col items-end gap-1">
                             @if($customer->new_matches_count > 0)
-                                <span class="inline-flex items-center justify-center size-5 rounded-full bg-green-500 text-white text-xs font-bold">
-                                    {{ $customer->new_matches_count }}
+                                <span class="inline-flex items-center justify-center rounded-full bg-green-500 text-white text-xs px-2">
+                                    {{ $customer->new_matches_count }} uyğunluq
                                 </span>
                             @endif
                             @if($customer->requests_count > 0)
@@ -410,8 +406,22 @@ new class extends Component {
     </div>
 
     {{-- ════ SAĞ PANEL: DETAL ════ --}}
-    <div class="flex-1 flex flex-col min-w-0 bg-zinc-50 dark:bg-zinc-950 h-full overflow-hidden">
+    <div class="flex-1 relative flex flex-col min-w-0 bg-zinc-50 dark:bg-zinc-950 h-full overflow-hidden">
 
+        <div wire:loading wire:target="selectCustomer"
+             style="position:absolute;inset:0;z-index:20">
+            <div style="display:flex;align-items:center;justify-content:center;height:100%;gap:8px">
+                <span style="width:10px;height:10px;border-radius:50%;background:#a1a1aa;animation:softBlink 1.2s ease-in-out infinite 0s"></span>
+                <span style="width:10px;height:10px;border-radius:50%;background:#a1a1aa;animation:softBlink 1.2s ease-in-out infinite 0.4s"></span>
+                <span style="width:10px;height:10px;border-radius:50%;background:#a1a1aa;animation:softBlink 1.2s ease-in-out infinite 0.8s"></span>
+            </div>
+        </div>
+        <style>
+            @keyframes softBlink {
+                0%, 100% { opacity: 0.15; }
+                50% { opacity: 0.9; }
+            }
+        </style>
 
         <div wire:loading.remove wire:target="selectCustomer" class="flex flex-col h-full overflow-hidden">
         @if(!$selectedCustomer)
@@ -514,7 +524,16 @@ new class extends Component {
 
             {{-- Uyğunluqlar paneli --}}
             @if($selectedRequestId && $selectedRequest)
-            <div class="flex-1 flex flex-col overflow-hidden">
+            <div class="flex-1 relative flex flex-col overflow-hidden">
+
+                <div wire:loading wire:target="selectRequest"
+                     style="position:absolute;inset:0;z-index:20">
+                    <div style="display:flex;align-items:center;justify-content:center;height:100%;gap:8px">
+                        <span style="width:10px;height:10px;border-radius:50%;background:#a1a1aa;animation:softBlink 1.2s ease-in-out infinite 0s"></span>
+                        <span style="width:10px;height:10px;border-radius:50%;background:#a1a1aa;animation:softBlink 1.2s ease-in-out infinite 0.4s"></span>
+                        <span style="width:10px;height:10px;border-radius:50%;background:#a1a1aa;animation:softBlink 1.2s ease-in-out infinite 0.8s"></span>
+                    </div>
+                </div>
 
                 {{-- Header --}}
                 <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900">
