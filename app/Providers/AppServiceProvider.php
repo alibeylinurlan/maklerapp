@@ -30,7 +30,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Superadmin bütün permission-ları bypass edir
         Gate::before(function ($user) {
-            if ($user->hasRole('superadmin')) {
+            if ($user->hasAnyRole(['superadmin', 'developer'])) {
                 return true;
             }
         });

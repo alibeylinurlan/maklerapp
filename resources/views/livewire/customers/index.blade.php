@@ -341,7 +341,8 @@ new class extends Component {
 }; ?>
 
 <div>
-<div class="flex gap-0 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-md" style="height: calc(100vh - 8rem)">
+<div class="flex flex-col" style="height: calc(100vh - 8rem); gap: 0.625rem;">
+<div class="flex gap-0 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-md flex-1 min-h-0">
 
     {{-- ════ SOL PANEL: MÜŞTƏRİLƏR ════ --}}
     <div class="flex flex-col border-r border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 h-full"
@@ -652,7 +653,15 @@ new class extends Component {
         @endif {{-- selectedCustomer --}}
         </div>{{-- wire:loading.remove wrapper --}}
     </div>
+</div>{{-- end 3-panel --}}
+
+{{-- ════ CANLI ELANLAR (horizontal) ════ --}}
+<div class="rounded-2xl overflow-hidden border border-white/10 shadow-xl shrink-0"
+     style="min-height: 170px; background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 60%, #064e3b 100%);">
+    @livewire('properties.live-feed-horizontal')
 </div>
+
+</div>{{-- end flex-col wrapper --}}
 
 {{-- ════ MODALS ════ --}}
 

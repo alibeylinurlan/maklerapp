@@ -35,7 +35,7 @@ new class extends Component {
         <button @click="sendTest()"
                 class="rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30 transition-colors">
             Test
-        </butt
+        </button>
         @endif
     </div>
 

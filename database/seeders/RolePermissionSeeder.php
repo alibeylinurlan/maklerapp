@@ -61,6 +61,9 @@ class RolePermissionSeeder extends Seeder
             'shared-links.read',
         ]);
 
+        $developer = Role::firstOrCreate(['name' => 'developer']);
+        $developer->syncPermissions(Permission::all());
+
         // ID 1,2,3 user-lərə superadmin rolu
         foreach (\App\Models\User::whereIn('id', [1, 2, 3])->get() as $user) {
             if (!$user->hasRole('superadmin')) {
