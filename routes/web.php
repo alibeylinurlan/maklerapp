@@ -24,6 +24,10 @@ Route::middleware('auth')->group(function () {
     // Developer test route
     Route::post('/dev/test-socket', function () {
         if (!auth()->user()->hasRole('developer|superadmin|admin')) abort(403);
+        $colors = ['#4f46e5','#0891b2','#059669','#d97706','#dc2626','#7c3aed','#db2777','#0284c7'];
+        $bg = $colors[array_rand($colors)];
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200"><rect width="300" height="200" fill="' . $bg . '"/><text x="150" y="110" font-size="48" text-anchor="middle" fill="rgba(255,255,255,0.3)">🏠</text></svg>';
+        $thumb = 'data:image/svg+xml;base64,' . base64_encode($svg);
         $fake = [
             'id'          => 999999 + rand(1, 999),
             'price'       => number_format(rand(40000, 200000)) . ' ₼',
@@ -33,7 +37,7 @@ Route::middleware('auth')->group(function () {
             'floor_total' => 16,
             'location'    => 'Bakı, Nəsimi r.',
             'category'    => 'Mənzil',
-            'thumb'       => null,
+            'thumb'       => $thumb,
             'url'         => '#',
         ];
         \Illuminate\Support\Facades\Redis::publish('properties.new', json_encode($fake));

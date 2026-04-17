@@ -25,7 +25,7 @@ new class extends Component {
                   :class="connected ? 'bg-emerald-500' : 'bg-zinc-600'"></span>
         </span>
         <span class="text-xs font-semibold text-white/80 tracking-wide">Canlı elanlar</span>
-        <span class="text-xs text-white/30 ml-1" x-show="items.length > 0" x-text="items.length + ' elan'"></span>
+        <!--<span class="text-xs text-white/30 ml-1" x-show="items.length > 0" x-text="items.length + ' elan'"></span>-->
         @if(auth()->user()->hasAnyRole(['superadmin', 'admin', 'developer']))
         <button @click="sendTest()"
                 class="ml-auto rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30 transition-colors">
@@ -87,9 +87,13 @@ new class extends Component {
                             <span x-show="item.area" x-text="item.area + ' m²'"
                                   class="text-[10px] text-white/60"></span>
                         </div>
-                        <div x-show="item.location"
-                             class="text-[9px] text-white/40 truncate mt-0.5"
-                             x-text="item.location"></div>
+                        <div class="flex items-center justify-between mt-0.5 gap-1">
+                            <div x-show="item.location"
+                                 class="text-[9px] text-white/40 truncate"
+                                 x-text="item.location"></div>
+                            <div class="text-[9px] text-white/30 shrink-0"
+                                 x-text="formatTime(item.created_at)"></div>
+                        </div>
                     </div>
                 </a>
             </template>

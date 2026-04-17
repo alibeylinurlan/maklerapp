@@ -82,7 +82,13 @@ new class extends Component {
 
         <form wire:submit="saveProfile" class="space-y-4">
             <flux:input wire:model="name" label="Ad Soyad" required />
-            <flux:input wire:model="phone" label="Telefon" placeholder="+994501234567" />
+            <flux:input wire:model="phone" label="Telefon" placeholder="+994501234567"
+                x-on:input="
+                    let val = $event.target.value.replace(/[^\d+]/g, '').replace(/^\++/, '');
+                    if (val.startsWith('994')) val = '+' + val;
+                    if (val.length > 20) val = val.slice(0, 20);
+                    if ($event.target.value !== val) { $event.target.value = val; $wire.set('phone', val); }
+                " />
             <div class="flex items-center justify-between pt-1">
                 <span wire:loading wire:target="saveProfile" class="text-sm text-zinc-400">Saxlanılır...</span>
                 <div x-data="{ saved: false }"

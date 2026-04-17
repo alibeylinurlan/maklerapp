@@ -133,10 +133,10 @@ new class extends Component {
 @else
 <div class="mx-auto max-w-[1600px]">
     {{-- Two-column layout: main + live feed --}}
-    <div class="flex gap-4 items-start" style="min-height: calc(100vh - 6rem);">
+    <div class="flex gap-4" style="height: calc(100vh - 6rem);">
 
     {{-- LEFT: main content --}}
-    <div class="flex-1 min-w-0">
+    <div class="flex-1 min-w-0 overflow-y-auto">
 
     <div class="flex items-center justify-between">
         <flux:heading size="xl">Elanlar</flux:heading>
@@ -364,8 +364,8 @@ new class extends Component {
     </div>{{-- end LEFT --}}
 
     {{-- RIGHT: live feed panel --}}
-    <div class="w-72 shrink-0 sticky top-4 self-start rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
-         style="background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 60%, #064e3b 100%); height: calc(100vh - 3rem);">
+    <div class="w-72 shrink-0 rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
+         style="background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 60%, #064e3b 100%); height: 100%;">
         @livewire('properties.live-feed')
     </div>
 

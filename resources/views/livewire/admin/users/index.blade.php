@@ -249,7 +249,13 @@ new class extends Component {
         <form wire:submit="save" class="mt-4 space-y-4">
             <flux:input wire:model="name" label="Ad Soyad" required />
             <flux:input wire:model="email" label="Email" type="email" required />
-            <flux:input wire:model="phone" label="Telefon" />
+            <flux:input wire:model="phone" label="Telefon"
+                x-on:input="
+                    let val = $event.target.value.replace(/[^\d+]/g, '').replace(/^\++/, '');
+                    if (val.startsWith('994')) val = '+' + val;
+                    if (val.length > 20) val = val.slice(0, 20);
+                    if ($event.target.value !== val) { $event.target.value = val; $wire.set('phone', val); }
+                " />
             <flux:input wire:model="password" label="{{ $editingId ? 'Şifrə (boş buraxsan dəyişməz)' : 'Şifrə' }}" type="password" />
 
             <div>

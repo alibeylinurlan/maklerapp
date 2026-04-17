@@ -341,7 +341,7 @@ new class extends Component {
 }; ?>
 
 <div>
-<div class="flex flex-col" style="height: calc(100vh - 8rem); gap: 0.625rem;">
+<div class="flex flex-col" style="height: calc(100vh - 4rem); gap: 0.625rem;">
 <div class="flex gap-0 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-md flex-1 min-h-0">
 
     {{-- ════ SOL PANEL: MÜŞTƏRİLƏR ════ --}}
@@ -674,7 +674,8 @@ new class extends Component {
             wpManuallyEdited: {{ $editingCustomerId && $cWhatsapp ? 'true' : 'false' }},
             maskPhone(el) {
                 let val = el.value.replace(/[^\d+]/g, '');
-                if (val.length > 1) val = '+' + val.replace(/\+/g, '');
+                val = val.replace(/^\++/, '');
+                if (val.startsWith('994')) val = '+' + val;
                 if (val.length > 20) val = val.slice(0, 20);
                 if (el.value !== val) el.value = val;
                 return val;

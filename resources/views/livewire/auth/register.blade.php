@@ -46,7 +46,13 @@ new class extends Component {
             <form wire:submit="register" class="space-y-4">
                 <flux:input wire:model="name" label="Ad Soyad" placeholder="Adınız" />
                 <flux:input wire:model="email" label="Email" type="email" placeholder="email@example.com" />
-                <flux:input wire:model="phone" label="Telefon" placeholder="+994 XX XXX XX XX" />
+                <flux:input wire:model="phone" label="Telefon" placeholder="+994 XX XXX XX XX"
+                    x-on:input="
+                        let val = $event.target.value.replace(/[^\d+]/g, '').replace(/^\++/, '');
+                        if (val.startsWith('994')) val = '+' + val;
+                        if (val.length > 20) val = val.slice(0, 20);
+                        if ($event.target.value !== val) { $event.target.value = val; $wire.set('phone', val); }
+                    " />
                 <flux:input wire:model="password" label="Şifrə" type="password" />
                 <flux:input wire:model="password_confirmation" label="Şifrə təkrar" type="password" />
 

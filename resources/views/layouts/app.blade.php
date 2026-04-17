@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'Binokl' }}</title>
+    <title>{{ $title ?? 'Binokl.az' }}</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='50'>◉◉</text></svg>">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @fluxAppearance
@@ -17,7 +17,7 @@
         <a href="{{ route('dashboard') }}" class="flex items-center gap-2 px-2 py-3">
             <span class="logo-light text-xl leading-none text-zinc-900 tracking-tighter select-none">◉◉</span>
             <span class="logo-dark text-xl leading-none text-white tracking-tighter select-none">◎◎</span>
-            <span class="text-lg font-bold text-zinc-800 dark:text-white">Binokl</span>
+            <span class="text-lg font-bold text-zinc-800 dark:text-white">Binokl.az</span>
         </a>
 
         @php
@@ -102,7 +102,7 @@
             <flux:sidebar.toggle icon="bars-3" class="lg:hidden" />
             <span class="logo-light text-xl leading-none text-zinc-900 tracking-tighter select-none">◉◉</span>
             <span class="logo-dark text-xl leading-none text-white tracking-tighter select-none">◎◎</span>
-            <span class="text-lg font-bold">Binokl</span>
+            <span class="text-lg font-bold">Binokl.az</span>
         </div>
 
         {{ $slot }}
