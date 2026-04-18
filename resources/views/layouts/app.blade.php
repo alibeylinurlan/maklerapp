@@ -8,17 +8,20 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='50'>◉◉</text></svg>">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @fluxAppearance
+    <style>
+        .eye-char { display: inline-block; transition: transform 0.5s ease; }
+    </style>
 </head>
 <body class="min-h-screen bg-zinc-50 dark:bg-zinc-900">
     @auth
     <flux:sidebar sticky stashable class="border-r border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 lg:w-64">
         <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
-        <a href="{{ route('dashboard') }}" class="flex items-center gap-2 px-2 py-3">
-            <span class="logo-light text-xl leading-none text-zinc-900 tracking-tighter select-none">◉◉</span>
-            <span class="logo-dark text-xl leading-none text-white tracking-tighter select-none">◎◎</span>
-            <span class="text-lg font-bold text-zinc-800 dark:text-white">Binokl.az</span>
-        </a>
+        <div class="flex items-center gap-2 px-2 py-3">
+            <span class="logo-light text-xl leading-none text-zinc-900 tracking-tighter select-none eye-logo"><span class="eye-char">◉</span><span class="eye-char">◉</span></span>
+            <span class="logo-dark text-xl leading-none text-white tracking-tighter select-none eye-logo"><span class="eye-char">◎</span><span class="eye-char">◎</span></span>
+            <a href="{{ route('dashboard') }}" class="text-lg font-bold text-zinc-800 dark:text-white">Binokl.az</a>
+        </div>
 
         @php
             $isAdminOrSuper = auth()->user()->hasAnyRole(['superadmin', 'admin']);
@@ -100,9 +103,9 @@
     <flux:main>
         <div class="flex items-center gap-3 mb-6 lg:hidden">
             <flux:sidebar.toggle icon="bars-3" class="lg:hidden" />
-            <span class="logo-light text-xl leading-none text-zinc-900 tracking-tighter select-none">◉◉</span>
-            <span class="logo-dark text-xl leading-none text-white tracking-tighter select-none">◎◎</span>
-            <span class="text-lg font-bold">Binokl.az</span>
+            <span class="logo-light text-xl leading-none text-zinc-900 tracking-tighter select-none eye-logo"><span class="eye-char">◉</span><span class="eye-char">◉</span></span>
+            <span class="logo-dark text-xl leading-none text-white tracking-tighter select-none eye-logo"><span class="eye-char">◎</span><span class="eye-char">◎</span></span>
+            <a href="{{ route('dashboard') }}" class="text-lg font-bold">Binokl.az</a>
         </div>
 
         {{ $slot }}
@@ -115,5 +118,34 @@
 
     @fluxScripts
     <script src="/socket.io.min.js"></script>
+    <script>
+        function blinkEye(el) {
+            if (el.dataset.blinking) return;
+            el.dataset.blinking = '1';
+            el.style.transition = 'transform 0.5s ease';
+            el.style.transform = 'rotateX(150deg)';
+            setTimeout(() => {
+                el.style.transform = 'rotateX(0deg)';
+                setTimeout(() => {
+                    el.style.transition = '';
+                    el.style.transform = '';
+                    delete el.dataset.blinking;
+                }, 500);
+            }, 500);
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.eye-logo').forEach(logo => {
+                const [left, right] = logo.querySelectorAll('.eye-char');
+                if (!left || !right) return;
+                left.addEventListener('mouseenter', () => blinkEye(right));
+                right.addEventListener('mouseenter', () => blinkEye(left));
+            });
+        });
+        function flipRandomEye() {
+            const chars = document.querySelectorAll('.eye-char');
+            if (chars.length) blinkEye(chars[Math.floor(Math.random() * chars.length)]);
+        }
+        setInterval(flipRandomEye, 60000);
+    </script>
 </body>
 </html>

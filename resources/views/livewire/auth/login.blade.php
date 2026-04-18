@@ -37,8 +37,8 @@ new class extends Component {
         {{-- Logo --}}
         <div class="mb-10 text-center">
             <div class="inline-flex items-center justify-center gap-2.5 mb-3">
-                <span class="logo-light login-logo-icon text-zinc-900">◉◉</span>
-                <span class="logo-dark login-logo-icon text-white">◎◎</span>
+                <span class="logo-light login-logo-icon text-zinc-900 eye-logo"><span class="eye-char">◉</span><span class="eye-char">◉</span></span>
+                <span class="logo-dark login-logo-icon text-white eye-logo"><span class="eye-char">◎</span><span class="eye-char">◎</span></span>
                 <span class="login-logo-text text-zinc-800 dark:text-white">Binokl.az</span>
             </div>
             <p class="text-sm text-zinc-400 dark:text-zinc-500 tracking-wide">Emlakçı platforması</p>
@@ -233,4 +233,34 @@ new class extends Component {
 .dark .login-btn:hover {
     background: #ffffff;
 }
+.eye-char { display: inline-block; }
 </style>
+<script>
+    function blinkEye(el) {
+        if (el.dataset.blinking) return;
+        el.dataset.blinking = '1';
+        el.style.transition = 'transform 0.5s ease';
+        el.style.transform = 'rotateX(150deg)';
+        setTimeout(() => {
+            el.style.transform = 'rotateX(0deg)';
+            setTimeout(() => {
+                el.style.transition = '';
+                el.style.transform = '';
+                delete el.dataset.blinking;
+            }, 500);
+        }, 500);
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.eye-logo').forEach(logo => {
+            const [left, right] = logo.querySelectorAll('.eye-char');
+            if (!left || !right) return;
+            left.addEventListener('mouseenter', () => blinkEye(right));
+            right.addEventListener('mouseenter', () => blinkEye(left));
+        });
+    });
+    function flipRandomEye() {
+        const chars = document.querySelectorAll('.eye-char');
+        if (chars.length) blinkEye(chars[Math.floor(Math.random() * chars.length)]);
+    }
+    setInterval(flipRandomEye, 60000);
+</script>
