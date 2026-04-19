@@ -45,8 +45,9 @@ new class extends Component {
             $this->lines = '';
             return;
         }
+        $limit = $this->activeLog === 'laravel' ? 1000 : 200;
         $allLines = array_filter(explode("\n", file_get_contents($path)));
-        $lastLines = array_slice(array_values($allLines), -200);
+        $lastLines = array_slice(array_values($allLines), -$limit);
         $this->lines = implode("\n", array_reverse($lastLines));
     }
 
