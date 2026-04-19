@@ -54,6 +54,12 @@ new class extends Component {
     // Match bulk selection
     public array $selectedMatchIds = [];
 
+    // Telegram notify modal
+    public bool $showNotifyModal = false;
+    public ?int $notifyRequestId = null;
+    public string $notifyRequestName = '';
+    public bool $notifyCurrentState = false;
+
     public function updatedSearch(): void { $this->resetPage(); $this->selectedCustomerId = null; }
     public function updatedMatchStatus(): void { $this->selectedMatchIds = []; }
 
@@ -188,7 +194,21 @@ new class extends Component {
         ], fn($v) => $v !== null);
 
         if ($this->editingRequestId) {
-            PropertyMatch::where('customer_request_id', $this->editingRequestId)->delete();
+            $existing = CustomerRequest::find($this->editingRequestId);
+            if ($existing) {
+                $oldFilters = $existing->filters ?? [];
+                if (isset($oldFilters['locationIds'])) {
+                    $oldFilters['locationIds'] = array_map('strval', $oldFilters['locationIds']);
+                }
+                $oldFilters = array_filter($oldFilters, fn($v) => $v !== null);
+                $compareOld = $oldFilters;
+                $compareNew = $filters;
+                ksort($compareOld);
+                ksort($compareNew);
+                if (json_encode($compareOld) !== json_encode($compareNew)) {
+                    PropertyMatch::where('customer_request_id', $this->editingRequestId)->delete();
+                }
+            }
         }
 
         $req = CustomerRequest::updateOrCreate(
@@ -214,6 +234,22 @@ new class extends Component {
     public function deleteRequest(int $id): void
     {
         CustomerRequest::where('user_id', auth()->id())->findOrFail($id)->delete();
+    }
+
+    public function openNotifyModal(int $id): void
+    {
+        $req = CustomerRequest::where('user_id', auth()->id())->findOrFail($id);
+        $this->notifyRequestId   = $req->id;
+        $this->notifyRequestName = $req->name;
+        $this->notifyCurrentState = $req->notify_telegram;
+        $this->showNotifyModal   = true;
+    }
+
+    public function confirmToggleTelegramNotify(): void
+    {
+        $req = CustomerRequest::where('user_id', auth()->id())->findOrFail($this->notifyRequestId);
+        $req->update(['notify_telegram' => !$req->notify_telegram]);
+        $this->showNotifyModal = false;
     }
 
     // ── Match actions ─────────────────────────────────────────────
@@ -512,6 +548,13 @@ new class extends Component {
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-1 shrink-0">
+                                    <button type="button" wire:click="openNotifyModal({{ $req->id }})"
+                                            title="{{ $req->notify_telegram ? 'Telegram bildirişi aktiv' : 'Telegram bildirişi deaktiv' }}"
+                                            class="inline-flex items-center justify-center size-7 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+                                        <svg class="size-4 {{ $req->notify_telegram ? 'text-emerald-500' : 'text-zinc-300 dark:text-zinc-600' }}" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                                        </svg>
+                                    </button>
                                     <flux:button wire:click="editRequest({{ $req->id }})" size="xs" variant="ghost" icon="pencil-square" />
                                     <flux:button wire:click="deleteRequest({{ $req->id }})" wire:confirm="Bu istəyi silmək istəyirsiniz?" size="xs" variant="ghost" icon="trash" class="text-red-500" />
                                 </div>
@@ -857,8 +900,36 @@ new class extends Component {
 
         <div class="flex justify-end gap-2">
             <flux:button wire:click="$set('showRequestForm', false)" variant="ghost">Ləğv et</flux:button>
-            <flux:button type="submit" variant="primary">Saxla</flux:button>
+            <flux:button type="submit" variant="primary" wire:loading.attr="disabled" wire:target="saveRequest">
+                <span wire:loading.remove wire:target="saveRequest">Saxla</span>
+                <span wire:loading wire:target="saveRequest">Saxlanır...</span>
+            </flux:button>
         </div>
     </form>
+</flux:modal>
+
+<flux:modal wire:model="showNotifyModal" class="max-w-sm">
+    <flux:heading size="lg" class="flex items-center gap-2">
+        <svg class="size-5 text-sky-500 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+        </svg>
+        Telegram bildirişi
+    </flux:heading>
+
+    <flux:subheading class="mt-2">
+        <span class="font-medium text-zinc-800 dark:text-zinc-100">{{ $notifyRequestName }}</span>
+        istəyi üçün Telegram bildirişini
+        <span class="{{ $notifyCurrentState ? 'text-red-500' : 'text-emerald-600' }} font-medium">
+            {{ $notifyCurrentState ? 'deaktiv' : 'aktiv' }}
+        </span>
+        etmək istəyirsiniz?
+    </flux:subheading>
+
+    <div class="flex justify-end gap-2 mt-6">
+        <flux:button wire:click="$set('showNotifyModal', false)" variant="ghost">Ləğv et</flux:button>
+        <flux:button wire:click="confirmToggleTelegramNotify" variant="{{ $notifyCurrentState ? 'danger' : 'primary' }}">
+            {{ $notifyCurrentState ? 'Deaktiv et' : 'Aktiv et' }}
+        </flux:button>
+    </div>
 </flux:modal>
 </div>

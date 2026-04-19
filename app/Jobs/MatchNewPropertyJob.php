@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\CustomerRequest;
 use App\Models\Property;
 use App\Models\PropertyMatch;
+use App\Services\TelegramService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -38,18 +39,39 @@ class MatchNewPropertyJob implements ShouldQueue
 
         $matchCount = 0;
 
+        $telegram = new TelegramService();
+
         foreach ($requests as $request) {
             if (self::matchesFilters($property, $request->filters)) {
-                PropertyMatch::firstOrCreate(
+                $match = PropertyMatch::firstOrCreate(
                     [
-                        'property_id' => $property->id,
+                        'property_id'         => $property->id,
                         'customer_request_id' => $request->id,
                     ],
                     [
-                        'user_id' => $request->user_id,
-                        'status' => 'new',
+                        'user_id'     => $request->user_id,
+                        'customer_id' => $request->customer_id,
+                        'status'      => 'new',
                     ]
                 );
+
+                if ($match->wasRecentlyCreated && $request->notify_telegram && $request->user?->telegram_user_id) {
+                    $price    = number_format($property->price) . ' ' . $property->currency;
+                    $rooms    = $property->rooms ? "{$property->rooms} otaq" : '';
+                    $area     = $property->area ? "{$property->area} m²" : '';
+                    $location = $property->location_full_name ?? '';
+                    $url      = $property->full_url ?? '';
+
+                    $text = "🔔 <b>Yeni uyğunluq!</b>\n\n"
+                          . "👤 <b>Müştəri:</b> {$request->customer?->name}\n"
+                          . "📋 <b>İstək:</b> {$request->name}\n\n"
+                          . "💰 {$price}" . ($rooms ? " • {$rooms}" : '') . ($area ? " • {$area}" : '') . "\n"
+                          . ($location ? "📍 {$location}\n" : '')
+                          . ($url ? "\n<a href=\"{$url}\">Elana bax →</a>" : '');
+
+                    $telegram->send($request->user->telegram_user_id, $text);
+                }
+
                 $matchCount++;
             }
         }

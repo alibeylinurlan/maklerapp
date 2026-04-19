@@ -17,6 +17,7 @@ class CustomerRequest extends Model
         'in_progress',
         'priority',
         'last_matched_at',
+        'notify_telegram',
     ];
 
     protected function casts(): array
@@ -27,6 +28,7 @@ class CustomerRequest extends Model
             'in_progress' => 'boolean',
             'priority' => 'integer',
             'last_matched_at' => 'datetime',
+            'notify_telegram' => 'boolean',
         ];
     }
 

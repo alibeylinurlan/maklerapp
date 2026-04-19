@@ -4,23 +4,43 @@ use Livewire\Volt\Component;
 new class extends Component {
     public string $name = '';
     public string $phone = '';
+    public string $telegramUserId = '';
 
     public function mount(): void
     {
-        $this->name  = auth()->user()->name;
-        $this->phone = auth()->user()->phone ?? '';
+        $this->name           = auth()->user()->name;
+        $this->phone          = auth()->user()->phone ?? '';
+        $this->telegramUserId = auth()->user()->telegram_user_id ?? '';
+    }
+
+    public function testTelegram(): void
+    {
+        $user = auth()->user();
+        if (!$user->telegram_user_id) {
+            $this->dispatch('telegram-test-result', success: false, message: 'Telegram User ID daxil edilməyib.');
+            return;
+        }
+
+        $telegram = new \App\Services\TelegramService();
+        $telegram->send($user->telegram_user_id,
+            "✅ <b>Test mesajı</b>\n\nBinokl.az bildirişləri aktiv və işləyir!"
+        );
+
+        $this->dispatch('telegram-test-result', success: true, message: 'Mesaj göndərildi!');
     }
 
     public function saveProfile(): void
     {
         $this->validate([
-            'name'  => 'required|min:2|max:255',
-            'phone' => 'nullable|max:20',
+            'name'           => 'required|min:2|max:255',
+            'phone'          => 'nullable|max:20',
+            'telegramUserId' => 'nullable|max:50',
         ]);
 
         auth()->user()->update([
-            'name'  => $this->name,
-            'phone' => $this->phone ?: null,
+            'name'             => $this->name,
+            'phone'            => $this->phone ?: null,
+            'telegram_user_id' => $this->telegramUserId ?: null,
         ]);
 
         $this->dispatch('profile-saved');
@@ -89,6 +109,30 @@ new class extends Component {
                     if (val.length > 20) val = val.slice(0, 20);
                     if ($event.target.value !== val) { $event.target.value = val; $wire.set('phone', val); }
                 " />
+            <div class="rounded-xl border border-zinc-200 dark:border-zinc-700 p-4 space-y-3">
+                <div class="flex items-center gap-2">
+                    <svg class="size-5 text-sky-500 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                    </svg>
+                    <span class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Telegram bildirişləri</span>
+                </div>
+                <flux:input wire:model="telegramUserId" label="Telegram User ID" placeholder="123456789"
+                    description="Öz Telegram User ID-nizi daxil edin. @userinfobot botundan əldə edə bilərsiniz." />
+                @if(auth()->user()->hasRole('developer'))
+                <div x-data="{ msg: '', ok: false }"
+                     x-on:telegram-test-result.window="msg = $event.detail.message; ok = $event.detail.success; setTimeout(() => msg = '', 4000)"
+                     class="flex items-center gap-3">
+                    <flux:button wire:click="testTelegram" size="sm" variant="ghost" wire:loading.attr="disabled" wire:target="testTelegram">
+                        <span wire:loading.remove wire:target="testTelegram">Test göndər</span>
+                        <span wire:loading wire:target="testTelegram">Göndərilir...</span>
+                    </flux:button>
+                    <span x-show="msg" x-transition
+                          :class="ok ? 'text-emerald-600' : 'text-red-500'"
+                          class="text-sm" x-text="msg"></span>
+                </div>
+                @endif
+            </div>
+
             <div class="flex items-center justify-between pt-1">
                 <span wire:loading wire:target="saveProfile" class="text-sm text-zinc-400">Saxlanılır...</span>
                 <div x-data="{ saved: false }"

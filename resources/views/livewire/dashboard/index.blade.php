@@ -61,23 +61,24 @@ new class extends Component {
     <flux:heading size="lg" class="mt-8">Son uyğunluqlar</flux:heading>
     <flux:table class="mt-3">
         <flux:table.columns>
-            <flux:table.column>İstək</flux:table.column>
-            <flux:table.column>Uyğunluq sayı</flux:table.column>
-            <flux:table.column>Son uyğunluq</flux:table.column>
+            <flux:table.column>Müştəri / İstək</flux:table.column>
+            <flux:table.column>Uyğunluq</flux:table.column>
+            <flux:table.column>Son tapılma</flux:table.column>
         </flux:table.columns>
 
         <flux:table.rows>
             @foreach($customerRequests as $request)
-                <flux:table.row>
-                    <flux:table.cell>{{ $request->name }}</flux:table.cell>
-
+                <flux:table.row
+                    class="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                    onclick="window.location='{{ route('customers.index', ['selectedCustomerId' => $request->customer_id, 'selectedRequestId' => $request->id]) }}'">
                     <flux:table.cell>
-                        <flux:badge color="green" size="sm">
-                            {{ $request->new_matches_count }}
-                        </flux:badge>
+                        <div class="font-medium text-zinc-800 dark:text-zinc-100">{{ $request->customer?->name }}</div>
+                        <div class="text-xs text-zinc-400 mt-0.5">{{ $request->name }}</div>
                     </flux:table.cell>
-
-                    <flux:table.cell class="text-xs text-zinc-500">
+                    <flux:table.cell>
+                        <flux:badge color="green" size="sm">{{ $request->new_matches_count }}</flux:badge>
+                    </flux:table.cell>
+                    <flux:table.cell class="text-xs text-zinc-400">
                         {{ $request->matches->max('created_at')?->diffForHumans() }}
                     </flux:table.cell>
                 </flux:table.row>

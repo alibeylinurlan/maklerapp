@@ -22,7 +22,7 @@ class User extends Authenticatable
         'email',
         'phone',
         'company_name',
-        'telegram_chat_id',
+        'telegram_user_id',
         'subscription_plan',
         'subscription_expires_at',
         'is_active',
