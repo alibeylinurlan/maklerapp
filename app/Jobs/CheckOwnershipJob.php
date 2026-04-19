@@ -21,7 +21,7 @@ class CheckOwnershipJob implements ShouldQueue
     public function __construct(
         private int $propertyId,
     ) {
-        $this->onQueue('owner-check');
+        $this->onQueue('default');
     }
 
     public function handle(BinaAzOwnerChecker $checker): void

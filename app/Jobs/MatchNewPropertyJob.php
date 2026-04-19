@@ -34,7 +34,7 @@ class MatchNewPropertyJob implements ShouldQueue
         if ($property->is_business) return;
 
         $requests = CustomerRequest::where('is_active', true)
-            ->with('customer')
+            ->with(['customer', 'user'])
             ->get();
 
         $matchCount = 0;
@@ -55,7 +55,15 @@ class MatchNewPropertyJob implements ShouldQueue
                     ]
                 );
 
-                if ($match->wasRecentlyCreated && $request->notify_telegram && $request->user?->telegram_user_id) {
+                // Yeni match və ya property yeniləndikdən sonra match hələ bildirilməyib
+                $shouldNotify = $match->wasRecentlyCreated
+                    || ($match->updated_at < $property->updated_at);
+
+                if ($shouldNotify) {
+                    $match->touch(); // updated_at yenilə ki, təkrar bildiriş getməsin
+                }
+
+                if ($shouldNotify && $request->notify_telegram && $request->user?->telegram_user_id) {
                     $price    = number_format($property->price) . ' ' . $property->currency;
                     $rooms    = $property->rooms ? "{$property->rooms} otaq" : '';
                     $area     = $property->area ? "{$property->area} m²" : '';

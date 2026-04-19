@@ -137,7 +137,7 @@ class ScrapeLoopCommand extends Command
                     }
 
                     $property = $parser->parseAndUpsert($node, $categoryId);
-                    if ($property) $this->publishToSocket($property);
+                    if ($property) { $this->publishToSocket($property); MatchNewPropertyJob::dispatch($property->id); }
                     $updated++;
                 } else {
                     $skipped++;
