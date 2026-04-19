@@ -456,9 +456,7 @@ new class extends Component {
                     <div class="flex flex-col items-end gap-1 shrink-0">
                         <span class="flex flex-col items-end gap-1">
                             @if($customer->new_matches_count > 0)
-                                <span class="inline-flex items-center justify-center rounded-full bg-green-500 text-white text-xs px-2">
-                                    {{ $customer->new_matches_count }} uyğunluq
-                                </span>
+                                <span class="size-2.5 rounded-full bg-green-500 block"></span>
                             @endif
                             @if($customer->requests_count > 0)
                                 <span class="text-xs text-zinc-400">{{ $customer->requests_count }} istək</span>

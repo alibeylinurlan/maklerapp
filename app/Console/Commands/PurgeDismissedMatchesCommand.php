@@ -12,11 +12,14 @@ class PurgeDismissedMatchesCommand extends Command
 
     public function handle(): int
     {
-        $deleted = PropertyMatch::where('status', 'dismissed')
+        $dismissed = PropertyMatch::where('status', 'dismissed')
             ->where('dismissed_at', '<=', now()->subHour())
             ->delete();
 
-        $this->info("Silindi: {$deleted} uyğunluq");
+        $old = PropertyMatch::where('created_at', '<=', now()->subMonth())
+            ->delete();
+
+        $this->info("Silindi (dismissed): {$dismissed} | Köhnə (1 ay): {$old} uyğunluq");
         return Command::SUCCESS;
     }
 }
