@@ -44,6 +44,11 @@ Route::middleware('auth')->group(function () {
         return response()->json(['ok' => true]);
     })->name('dev.test-socket');
 
+    // Developer panel
+    Route::middleware('role:developer')->prefix('dev')->group(function () {
+        Volt::route('/logs', 'dev.logs')->name('dev.logs');
+    });
+
     // Admin panel
     Route::middleware('role:superadmin|admin')->prefix('admin')->group(function () {
         Volt::route('/users', 'admin.users.index')->name('admin.users');

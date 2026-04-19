@@ -18,6 +18,9 @@ class TelegramService
     {
         if (!$this->token || !$chatId) return;
 
+        $status = 'ok';
+        $error  = null;
+
         try {
             Http::post("https://api.telegram.org/bot{$this->token}/sendMessage", [
                 'chat_id'    => $chatId,
@@ -25,7 +28,18 @@ class TelegramService
                 'parse_mode' => 'HTML',
             ]);
         } catch (\Throwable $e) {
+            $status = 'fail';
+            $error  = $e->getMessage();
             Log::warning("Telegram send failed: " . $e->getMessage());
         }
+
+        $logMessage = implode(' | ', array_filter([
+            "to:{$chatId}",
+            "status:{$status}",
+            $error ? "error:{$error}" : null,
+            strip_tags(preg_replace('/\s+/', ' ', $message)),
+        ]));
+
+        Log::channel('telegram')->info($logMessage);
     }
 }

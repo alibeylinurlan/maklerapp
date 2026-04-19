@@ -53,6 +53,16 @@
             </flux:navlist.group>
         </flux:navlist>
 
+        @if(auth()->user()->hasRole('developer'))
+        <flux:navlist variant="outline">
+            <flux:navlist.group heading="Developer">
+                <flux:navlist.item icon="document-text" :href="route('dev.logs')" :current="request()->routeIs('dev.logs')">
+                    Loglar
+                </flux:navlist.item>
+            </flux:navlist.group>
+        </flux:navlist>
+        @endif
+
         @if(auth()->user()->hasAnyRole(['superadmin', 'admin']))
         <flux:navlist variant="outline">
             <flux:navlist.group heading="Admin">

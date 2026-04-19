@@ -127,6 +127,13 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'telegram' => [
+            'driver' => 'daily',
+            'path'   => storage_path('logs/telegram.log'),
+            'days'   => 14,
+            'level'  => 'info',
+        ],
+
     ],
 
 ];
