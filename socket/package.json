@@ -1,0 +1,9 @@
+{
+  "name": "makler-socket",
+  "version": "1.0.0",
+  "main": "server.js",
+  "dependencies": {
+    "socket.io": "^4.8.1",
+    "ioredis": "^5.3.2"
+  }
+}
