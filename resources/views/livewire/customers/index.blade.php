@@ -561,7 +561,7 @@ new class extends Component {
                     <div class="divide-y divide-zinc-100 dark:divide-zinc-800">
                         @foreach($requests as $req)
                         @php $isSelected = $selectedRequestId === $req->id; @endphp
-                        <div class="px-4 py-3 transition-colors
+                        <div wire:click="selectRequest({{ $req->id }})" class="px-4 py-3 transition-colors cursor-pointer
                             {{ $isSelected ? 'bg-indigo-50 dark:bg-indigo-950/40 border-l-2 border-l-indigo-500' : 'border-l-2 border-l-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800/50' }}">
                             <div class="flex items-start justify-between gap-2">
                                 <div class="min-w-0 flex-1">
@@ -569,18 +569,15 @@ new class extends Component {
                                         {{ $req->name }}
                                     </div>
                                     <div class="mt-1 flex items-center gap-2">
-                                        <button wire:click="selectRequest({{ $req->id }})"
-                                                class="flex items-center gap-1 hover:opacity-70 transition-opacity">
-                                            <flux:badge size="sm" color="{{ $req->new_matches_count > 0 ? 'green' : 'zinc' }}">
-                                                {{ $req->matches_count }}
-                                            </flux:badge>
-                                            @if($req->new_matches_count > 0)
-                                                <span class="text-xs text-green-600 font-medium">{{ $req->new_matches_count }} yeni</span>
-                                            @endif
-                                        </button>
+                                        <flux:badge size="sm" color="{{ $req->new_matches_count > 0 ? 'green' : 'zinc' }}">
+                                            {{ $req->matches_count }}
+                                        </flux:badge>
+                                        @if($req->new_matches_count > 0)
+                                            <span class="text-xs text-green-600 font-medium">{{ $req->new_matches_count }} yeni</span>
+                                        @endif
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-1 shrink-0">
+                                <div class="flex items-center gap-1 shrink-0" wire:click.stop>
                                     <button type="button" wire:click="openNotifyModal({{ $req->id }})"
                                             title="{{ $req->notify_telegram ? 'Telegram bildirişi aktiv' : 'Telegram bildirişi deaktiv' }}"
                                             class="inline-flex items-center justify-center size-7 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
