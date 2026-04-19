@@ -127,8 +127,18 @@ new class extends Component {
                     </svg>
                     <span class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Telegram bildirişləri</span>
                 </div>
-                <flux:input wire:model="telegramUserId" label="Telegram User ID" placeholder="123456789"
-                    description="Öz Telegram User ID-nizi daxil edin. @userinfobot botundan əldə edə bilərsiniz." />
+                <flux:card>
+                    <flux:text>
+                        Botun aktivləşdirilməsi qaydası : 
+                        <br><br>
+                        1. Telegramda "@binoklaz_bot" yazaraq axtariş edin. Daha sonra @binoklaz_bot botuna daxil olub "start" düyməsini sıxın.
+                        <br><br>
+                        2. Telegramda "@userinfobot" yazaraq axtariş edin. Daha sonra @userinfobot botuna daxil olub "start" düyməsini sıxın, yoxdursa "/start" yazın
+                        <br><br>
+                        3. @userinfobot sizə  10 rəqəmli "Id" nömrəsi verəcək. Həmin "Id" nömrəsini aşağı yazıb yadda saxlayın
+                    </flux:text>
+                </flux:card>
+                <flux:input wire:model="telegramUserId" label="Telegram User ID" placeholder="1234567890"/>
                 @if(auth()->user()->hasRole('developer'))
                 <div x-data="{ msg: '', ok: false }"
                      x-on:telegram-test-result.window="msg = $event.detail.message; ok = $event.detail.success; setTimeout(() => msg = '', 4000)"
