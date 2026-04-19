@@ -222,9 +222,10 @@ new class extends Component {
             ]
         );
 
-        if ($req->is_active && ($req->filters['searchScope'] ?? 'new_only') === 'all') {
-            MatchRequestToExistingPropertiesJob::dispatchSync($req->id);
-        }
+        // Bütün elanlar seçimi müvəqqəti deaktivdir
+        // if ($req->is_active && ($req->filters['searchScope'] ?? 'new_only') === 'all') {
+        //     MatchRequestToExistingPropertiesJob::dispatchSync($req->id);
+        // }
 
         $this->showRequestForm = false;
         $this->selectedRequestId = $req->id;
@@ -266,7 +267,18 @@ new class extends Component {
 
     public function dismiss(int $id): void
     {
-        PropertyMatch::where('user_id', auth()->id())->findOrFail($id)->update(['status' => 'dismissed']);
+        PropertyMatch::where('user_id', auth()->id())->findOrFail($id)->update([
+            'status'       => 'dismissed',
+            'dismissed_at' => now(),
+        ]);
+    }
+
+    public function recover(int $id): void
+    {
+        PropertyMatch::where('user_id', auth()->id())->findOrFail($id)->update([
+            'status'       => 'in_progress',
+            'dismissed_at' => null,
+        ]);
     }
 
     public function bulkMarkViewed(): void
@@ -286,7 +298,20 @@ new class extends Component {
     public function bulkDismiss(): void
     {
         if (empty($this->selectedMatchIds)) return;
-        PropertyMatch::where('user_id', auth()->id())->whereIn('id', $this->selectedMatchIds)->update(['status' => 'dismissed']);
+        PropertyMatch::where('user_id', auth()->id())->whereIn('id', $this->selectedMatchIds)->update([
+            'status'       => 'dismissed',
+            'dismissed_at' => now(),
+        ]);
+        $this->selectedMatchIds = [];
+    }
+
+    public function bulkRecover(): void
+    {
+        if (empty($this->selectedMatchIds)) return;
+        PropertyMatch::where('user_id', auth()->id())->whereIn('id', $this->selectedMatchIds)->update([
+            'status'       => 'in_progress',
+            'dismissed_at' => null,
+        ]);
         $this->selectedMatchIds = [];
     }
 
@@ -306,8 +331,16 @@ new class extends Component {
             ->withCount(['requests as new_matches_count' => function ($q) {
                 $q->whereHas('matches', fn($m) => $m->where('status', 'new'));
             }])
+            ->selectSub(
+                \App\Models\PropertyMatch::selectRaw('MAX(created_at)')
+                    ->whereColumn('customer_id', 'customers.id')
+                    ->where('status', 'new'),
+                'latest_new_match_at'
+            )
             ->with('user:id,name')
-            ->orderByDesc('created_at');
+            ->orderByRaw('latest_new_match_at IS NULL ASC')
+            ->orderByDesc('latest_new_match_at')
+            ->orderByDesc('updated_at');
 
         if ($this->search) {
             $customerQuery->where(function ($q) {
@@ -589,12 +622,25 @@ new class extends Component {
 
                 {{-- Status tabs --}}
                 <div class="flex gap-1 px-4 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-                    @foreach(['new' => 'Yeni', 'viewed' => 'Baxılıb', 'in_progress' => 'Nəzarətdə', 'dismissed' => 'Keçildi'] as $status => $label)
+                    @foreach(['new' => 'Yeni', 'viewed' => 'Baxılıb', 'in_progress' => 'Nəzarətdə', 'dismissed' => 'Silindi'] as $status => $label)
                     <flux:button wire:click="$set('matchStatus', '{{ $status }}')"
                         variant="{{ $matchStatus === $status ? 'primary' : 'ghost' }}" size="xs">
                         {{ $label }} ({{ $matchCounts[$status] }})
                     </flux:button>
                     @endforeach
+                </div>
+
+                {{-- Tab description --}}
+                @php
+                    $tabDescriptions = [
+                        'new'         => 'Yeni tapılan uyğunluqlar',
+                        'viewed'      => 'Gedib baxmısız bu elanlara',
+                        'in_progress' => 'Bu elanlar sizin diqqət mərkəzinizdədir. Danışıqlar gedir.',
+                        'dismissed'   => 'Burda sildiyiniz uyğunluqları görürsünüz. 1 saat sonra avtomatik silinəcək.',
+                    ];
+                @endphp
+                <div class="px-4 py-2 border-b border-zinc-100 dark:border-zinc-800">
+                    <p class="text-xs text-zinc-400">{{ $tabDescriptions[$matchStatus] }}</p>
                 </div>
 
                 {{-- Bulk action bar --}}
@@ -608,8 +654,10 @@ new class extends Component {
                         @if($matchStatus !== 'in_progress')
                         <flux:button wire:click="bulkMarkInProgress" size="xs" variant="ghost" icon="clock">Nəzarətdə</flux:button>
                         @endif
-                        @if($matchStatus !== 'dismissed')
-                        <flux:button wire:click="bulkDismiss" size="xs" variant="ghost" icon="x-mark" class="text-red-500">Keç</flux:button>
+                        @if($matchStatus === 'dismissed')
+                        <flux:button wire:click="bulkRecover" size="xs" variant="ghost" icon="arrow-uturn-left" class="text-green-600">Bərpa et</flux:button>
+                        @else
+                        <flux:button wire:click="bulkDismiss" size="xs" variant="ghost" icon="x-mark" class="text-red-500">Sil</flux:button>
                         @endif
                     </div>
                 </div>
@@ -671,8 +719,10 @@ new class extends Component {
                                         @if($match->status !== 'in_progress')
                                             <flux:button wire:click="markInProgress({{ $match->id }})" size="xs" variant="ghost" icon="clock" title="Nəzarətdə" />
                                         @endif
-                                        @if($match->status !== 'dismissed')
-                                            <flux:button wire:click="dismiss({{ $match->id }})" size="xs" variant="ghost" icon="x-mark" class="text-red-500" title="Keç" />
+                                        @if($match->status === 'dismissed')
+                                            <flux:button wire:click="recover({{ $match->id }})" size="xs" variant="ghost" icon="arrow-uturn-left" class="text-green-600" title="Bərpa et" />
+                                        @else
+                                            <flux:button wire:click="dismiss({{ $match->id }})" size="xs" variant="ghost" icon="x-mark" class="text-red-500" title="Sil" />
                                         @endif
                                     </div>
                                 </div>
@@ -853,8 +903,8 @@ new class extends Component {
                         placeholder="Filtrləri seçin..." required />
         </div>
 
-        {{-- Axtarış əhatəsi --}}
-        <div>
+        {{-- Axtarış əhatəsi (müvəqqəti deaktiv) --}}
+        {{-- <div>
             <flux:label class="mb-1.5">Axtarış əhatəsi</flux:label>
             <div class="flex gap-3">
                 <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 transition"
@@ -874,7 +924,7 @@ new class extends Component {
                     </div>
                 </label>
             </div>
-        </div>
+        </div> --}}
 
         @include('livewire.partials.filter-fields', [
             'categories' => $categories,

@@ -37,11 +37,22 @@ new class extends Component {
             'telegramUserId' => 'nullable|max:50',
         ]);
 
-        auth()->user()->update([
+        $user = auth()->user();
+        $oldTelegramId = $user->telegram_user_id;
+        $newTelegramId = $this->telegramUserId ?: null;
+
+        $user->update([
             'name'             => $this->name,
             'phone'            => $this->phone ?: null,
-            'telegram_user_id' => $this->telegramUserId ?: null,
+            'telegram_user_id' => $newTelegramId,
         ]);
+
+        if ($newTelegramId && $newTelegramId !== $oldTelegramId) {
+            $telegram = new \App\Services\TelegramService();
+            $telegram->send($newTelegramId,
+                "👋 <b>Xoş gəldiniz, {$user->name}!</b>\n\nBinokl.az bildirişləri uğurla qoşuldu. Yeni uyğunluq tapıldıqda sizə xəbər verəcəyik."
+            );
+        }
 
         $this->dispatch('profile-saved');
     }

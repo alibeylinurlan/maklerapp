@@ -1,4 +1,6 @@
 <?php
 
-// Scraping artıq `php artisan scrape:loop` command ilə idarə olunur.
-// Scheduler/cron artıq istifadə olunmur.
+use Illuminate\Support\Facades\Schedule;
+
+// "Silindi" statusunda 1 saatdan artıq olan uyğunluqları hər 15 dəqiqədə bir sil
+Schedule::command('matches:purge-dismissed')->everyFifteenMinutes();

@@ -11,7 +11,9 @@ class PropertyMatch extends Model
         'property_id',
         'customer_request_id',
         'user_id',
+        'customer_id',
         'status',
+        'dismissed_at',
         'notified_at',
         'notification_channel',
     ];
@@ -19,7 +21,8 @@ class PropertyMatch extends Model
     protected function casts(): array
     {
         return [
-            'notified_at' => 'datetime',
+            'dismissed_at' => 'datetime',
+            'notified_at'  => 'datetime',
         ];
     }
 
