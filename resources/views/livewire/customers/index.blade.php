@@ -15,6 +15,7 @@ new class extends Component {
 
     // Left panel
     public string $search = '';
+    public int $customerLimit = 30;
     #[Url] public ?int $selectedCustomerId = null;
 
     // Right panel
@@ -60,7 +61,12 @@ new class extends Component {
     public string $notifyRequestName = '';
     public bool $notifyCurrentState = false;
 
-    public function updatedSearch(): void { $this->resetPage(); $this->selectedCustomerId = null; }
+    public function updatedSearch(): void { $this->resetPage(); $this->customerLimit = 30; $this->selectedCustomerId = null; }
+
+    public function loadMoreCustomers(): void
+    {
+        $this->customerLimit += 30;
+    }
     public function updatedMatchStatus(): void { $this->selectedMatchIds = []; }
 
 
@@ -349,7 +355,9 @@ new class extends Component {
             });
         }
 
-        $customers = $customerQuery->get();
+        $customers = $customerQuery->limit($this->customerLimit + 1)->get();
+        $hasMoreCustomers = $customers->count() > $this->customerLimit;
+        $customers = $customers->take($this->customerLimit);
 
         // Right panel data
         $selectedCustomer = null;
@@ -396,6 +404,7 @@ new class extends Component {
 
         return [
             'customers'        => $customers,
+            'hasMoreCustomers' => $hasMoreCustomers,
             'hasChildren'      => $hasChildren,
             'selectedCustomer' => $selectedCustomer,
             'canUseRequests'   => $canUseRequests,
@@ -429,7 +438,8 @@ new class extends Component {
         </div>
 
         {{-- Customer list --}}
-        <div class="flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-y-auto" x-data
+             x-on:scroll.passive="if($el.scrollTop + $el.clientHeight >= $el.scrollHeight - 40) $wire.loadMoreCustomers()">
             @forelse($customers as $customer)
             @php $isSelected = $selectedCustomerId === $customer->id; @endphp
             <button
@@ -470,6 +480,14 @@ new class extends Component {
                 Müştəri tapılmadı
             </div>
             @endforelse
+            @if($hasMoreCustomers)
+            <div wire:loading.remove wire:target="loadMoreCustomers" class="py-3 text-center text-xs text-zinc-400">
+                Daha çox yükləmək üçün aşağı sürüşdürün
+            </div>
+            <div wire:loading wire:target="loadMoreCustomers" class="py-3 w-full flex justify-center text-xs text-zinc-400">
+                Yüklənir...
+            </div>
+            @endif
         </div>
     </div>
 
@@ -523,6 +541,10 @@ new class extends Component {
                     @if($selectedCustomer->notes)
                     <span class="text-zinc-400 italic truncate max-w-xs">{{ $selectedCustomer->notes }}</span>
                     @endif
+                    <span class="flex items-center gap-1 text-zinc-400">
+                        <flux:icon.calendar class="size-3.5" />
+                        {{ $selectedCustomer->created_at->format('d.m.Y') }}
+                    </span>
                 </div>
             </div>
             <div class="flex gap-1 shrink-0">
