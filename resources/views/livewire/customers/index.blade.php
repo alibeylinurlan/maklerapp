@@ -337,16 +337,8 @@ new class extends Component {
             ->withCount(['requests as new_matches_count' => function ($q) {
                 $q->whereHas('matches', fn($m) => $m->where('status', 'new'));
             }])
-            ->selectSub(
-                \App\Models\PropertyMatch::selectRaw('MAX(created_at)')
-                    ->whereColumn('customer_id', 'customers.id')
-                    ->where('status', 'new'),
-                'latest_new_match_at'
-            )
             ->with('user:id,name')
-            ->orderByRaw('latest_new_match_at IS NULL ASC')
-            ->orderByDesc('latest_new_match_at')
-            ->orderByDesc('updated_at');
+            ->orderByDesc('last_activity_at');
 
         if ($this->search) {
             $customerQuery->where(function ($q) {

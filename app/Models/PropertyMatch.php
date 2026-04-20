@@ -7,6 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PropertyMatch extends Model
 {
+    protected static function booted(): void
+    {
+        static::saved(fn($m) => $m->customer?->touchActivity());
+        static::deleted(fn($m) => $m->customer?->touchActivity());
+    }
+
     protected $fillable = [
         'property_id',
         'customer_request_id',
@@ -34,6 +40,11 @@ class PropertyMatch extends Model
     public function customerRequest(): BelongsTo
     {
         return $this->belongsTo(CustomerRequest::class);
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     public function user(): BelongsTo

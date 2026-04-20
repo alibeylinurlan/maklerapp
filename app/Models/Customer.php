@@ -11,6 +11,15 @@ class Customer extends Model
 {
     use SoftDeletes;
 
+    protected static function booted(): void
+    {
+        static::saving(function ($customer) {
+            if ($customer->isDirty(array_diff($customer->getFillable(), ['last_activity_at']))) {
+                $customer->last_activity_at = now();
+            }
+        });
+    }
+
     protected $fillable = [
         'user_id',
         'name',
@@ -18,13 +27,22 @@ class Customer extends Model
         'whatsapp',
         'notes',
         'is_active',
+        'last_activity_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_active' => 'boolean',
+            'is_active'        => 'boolean',
+            'last_activity_at' => 'datetime',
         ];
+    }
+
+    public function touchActivity(): void
+    {
+        $this->timestamps = false;
+        $this->update(['last_activity_at' => now()]);
+        $this->timestamps = true;
     }
 
     public function user(): BelongsTo
