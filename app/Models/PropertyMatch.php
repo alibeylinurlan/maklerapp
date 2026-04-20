@@ -7,11 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PropertyMatch extends Model
 {
-    protected static function booted(): void
-    {
-        static::saved(fn($m) => $m->customer?->touchActivity());
-        static::deleted(fn($m) => $m->customer?->touchActivity());
-    }
 
     protected $fillable = [
         'property_id',

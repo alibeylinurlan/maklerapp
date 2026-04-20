@@ -54,6 +54,11 @@ class MatchNewPropertyJob implements ShouldQueue
                         ]
                     );
 
+                    if ($match->wasRecentlyCreated && $request->customer_id) {
+                        \App\Models\Customer::where('id', $request->customer_id)
+                            ->update(['last_activity_at' => now()]);
+                    }
+
                     $shouldNotify = $match->wasRecentlyCreated
                         || ($match->updated_at < $property->updated_at);
 

@@ -8,11 +8,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CustomerRequest extends Model
 {
-    protected static function booted(): void
-    {
-        static::saved(fn($r) => $r->customer?->touchActivity());
-        static::deleted(fn($r) => $r->customer?->touchActivity());
-    }
 
     protected $fillable = [
         'customer_id',

@@ -122,6 +122,7 @@ new class extends Component {
                 'notes'    => $this->cNotes ?: null,
             ]
         );
+        $customer->touchActivity();
 
         $this->selectedCustomerId = $customer->id;
         $this->showCustomerForm = false;
@@ -233,6 +234,8 @@ new class extends Component {
         //     MatchRequestToExistingPropertiesJob::dispatchSync($req->id);
         // }
 
+        Customer::find($this->selectedCustomerId)?->touchActivity();
+
         $this->showRequestForm = false;
         $this->selectedRequestId = $req->id;
         $this->matchStatus = 'new';
@@ -240,7 +243,10 @@ new class extends Component {
 
     public function deleteRequest(int $id): void
     {
-        CustomerRequest::where('user_id', auth()->id())->findOrFail($id)->delete();
+        $req = CustomerRequest::where('user_id', auth()->id())->findOrFail($id);
+        $customerId = $req->customer_id;
+        $req->delete();
+        Customer::find($customerId)?->touchActivity();
     }
 
     public function openNotifyModal(int $id): void
@@ -261,14 +267,23 @@ new class extends Component {
 
     // ── Match actions ─────────────────────────────────────────────
 
+    private function touchCurrentCustomer(): void
+    {
+        if ($this->selectedCustomerId) {
+            Customer::find($this->selectedCustomerId)?->touchActivity();
+        }
+    }
+
     public function markViewed(int $id): void
     {
         PropertyMatch::where('user_id', auth()->id())->findOrFail($id)->update(['status' => 'viewed']);
+        $this->touchCurrentCustomer();
     }
 
     public function markInProgress(int $id): void
     {
         PropertyMatch::where('user_id', auth()->id())->findOrFail($id)->update(['status' => 'in_progress']);
+        $this->touchCurrentCustomer();
     }
 
     public function dismiss(int $id): void
@@ -277,6 +292,7 @@ new class extends Component {
             'status'       => 'dismissed',
             'dismissed_at' => now(),
         ]);
+        $this->touchCurrentCustomer();
     }
 
     public function recover(int $id): void
@@ -285,6 +301,7 @@ new class extends Component {
             'status'       => 'in_progress',
             'dismissed_at' => null,
         ]);
+        $this->touchCurrentCustomer();
     }
 
     public function bulkMarkViewed(): void
@@ -292,6 +309,7 @@ new class extends Component {
         if (empty($this->selectedMatchIds)) return;
         PropertyMatch::where('user_id', auth()->id())->whereIn('id', $this->selectedMatchIds)->update(['status' => 'viewed']);
         $this->selectedMatchIds = [];
+        $this->touchCurrentCustomer();
     }
 
     public function bulkMarkInProgress(): void
@@ -299,6 +317,7 @@ new class extends Component {
         if (empty($this->selectedMatchIds)) return;
         PropertyMatch::where('user_id', auth()->id())->whereIn('id', $this->selectedMatchIds)->update(['status' => 'in_progress']);
         $this->selectedMatchIds = [];
+        $this->touchCurrentCustomer();
     }
 
     public function bulkDismiss(): void
@@ -309,6 +328,7 @@ new class extends Component {
             'dismissed_at' => now(),
         ]);
         $this->selectedMatchIds = [];
+        $this->touchCurrentCustomer();
     }
 
     public function bulkRecover(): void
@@ -319,6 +339,7 @@ new class extends Component {
             'dismissed_at' => null,
         ]);
         $this->selectedMatchIds = [];
+        $this->touchCurrentCustomer();
     }
 
     // ── Data ──────────────────────────────────────────────────────

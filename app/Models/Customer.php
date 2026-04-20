@@ -11,14 +11,6 @@ class Customer extends Model
 {
     use SoftDeletes;
 
-    protected static function booted(): void
-    {
-        static::saving(function ($customer) {
-            if ($customer->isDirty(array_diff($customer->getFillable(), ['last_activity_at']))) {
-                $customer->last_activity_at = now();
-            }
-        });
-    }
 
     protected $fillable = [
         'user_id',
