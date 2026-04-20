@@ -768,7 +768,7 @@ new class extends Component {
 {{-- ════ CANLI ELANLAR (horizontal) ════ --}}
 <div class="rounded-2xl overflow-hidden border border-white/10 shadow-xl shrink-0"
      style="min-height: 170px; background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 60%, #064e3b 100%);">
-    @livewire('properties.live-feed-horizontal')
+    @livewire('properties.live-feed-horizontal', key('live-feed-horizontal'))
 </div>
 
 </div>{{-- end flex-col wrapper --}}

@@ -367,7 +367,7 @@ new class extends Component {
     <div class="w-72 shrink-0 rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
          style="background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 60%, #064e3b 100%);
                 position: fixed; top: 1rem; right: 1rem; bottom: 1rem;">
-        @livewire('properties.live-feed')
+        @livewire('properties.live-feed', key('live-feed'))
     </div>
 
     </div>{{-- end two-column --}}

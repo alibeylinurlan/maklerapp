@@ -33,56 +33,54 @@ class MatchNewPropertyJob implements ShouldQueue
         // business elanları skip
         if ($property->is_business) return;
 
-        $requests = CustomerRequest::where('is_active', true)
-            ->with(['customer', 'user'])
-            ->get();
-
         $matchCount = 0;
-
         $telegram = new TelegramService();
 
-        foreach ($requests as $request) {
-            if (self::matchesFilters($property, $request->filters)) {
-                $match = PropertyMatch::firstOrCreate(
-                    [
-                        'property_id'         => $property->id,
-                        'customer_request_id' => $request->id,
-                    ],
-                    [
-                        'user_id'     => $request->user_id,
-                        'customer_id' => $request->customer_id,
-                        'status'      => 'new',
-                    ]
-                );
+        CustomerRequest::where('is_active', true)
+            ->with(['customer', 'user'])
+            ->chunk(200, function ($requests) use ($property, $telegram, &$matchCount) {
+                foreach ($requests as $request) {
+                    if (!self::matchesFilters($property, $request->filters)) continue;
 
-                // Yeni match və ya property yeniləndikdən sonra match hələ bildirilməyib
-                $shouldNotify = $match->wasRecentlyCreated
-                    || ($match->updated_at < $property->updated_at);
+                    $match = PropertyMatch::firstOrCreate(
+                        [
+                            'property_id'         => $property->id,
+                            'customer_request_id' => $request->id,
+                        ],
+                        [
+                            'user_id'     => $request->user_id,
+                            'customer_id' => $request->customer_id,
+                            'status'      => 'new',
+                        ]
+                    );
 
-                if ($shouldNotify) {
-                    $match->touch(); // updated_at yenilə ki, təkrar bildiriş getməsin
+                    $shouldNotify = $match->wasRecentlyCreated
+                        || ($match->updated_at < $property->updated_at);
+
+                    if ($shouldNotify) {
+                        $match->touch();
+                    }
+
+                    if ($shouldNotify && $request->notify_telegram && $request->user?->telegram_user_id) {
+                        $price    = number_format($property->price) . ' ' . $property->currency;
+                        $rooms    = $property->rooms ? "{$property->rooms} otaq" : '';
+                        $area     = $property->area ? "{$property->area} m²" : '';
+                        $location = $property->location_full_name ?? '';
+                        $url      = $property->full_url ?? '';
+
+                        $text = "🔔 <b>Yeni uyğunluq!</b>\n\n"
+                              . "👤 <b>Müştəri:</b> {$request->customer?->name}\n"
+                              . "📋 <b>İstək:</b> {$request->name}\n\n"
+                              . "💰 {$price}" . ($rooms ? " • {$rooms}" : '') . ($area ? " • {$area}" : '') . "\n"
+                              . ($location ? "📍 {$location}\n" : '')
+                              . ($url ? "\n<a href=\"{$url}\">Elana bax →</a>" : '');
+
+                        $telegram->send($request->user->telegram_user_id, $text);
+                    }
+
+                    $matchCount++;
                 }
-
-                if ($shouldNotify && $request->notify_telegram && $request->user?->telegram_user_id) {
-                    $price    = number_format($property->price) . ' ' . $property->currency;
-                    $rooms    = $property->rooms ? "{$property->rooms} otaq" : '';
-                    $area     = $property->area ? "{$property->area} m²" : '';
-                    $location = $property->location_full_name ?? '';
-                    $url      = $property->full_url ?? '';
-
-                    $text = "🔔 <b>Yeni uyğunluq!</b>\n\n"
-                          . "👤 <b>Müştəri:</b> {$request->customer?->name}\n"
-                          . "📋 <b>İstək:</b> {$request->name}\n\n"
-                          . "💰 {$price}" . ($rooms ? " • {$rooms}" : '') . ($area ? " • {$area}" : '') . "\n"
-                          . ($location ? "📍 {$location}\n" : '')
-                          . ($url ? "\n<a href=\"{$url}\">Elana bax →</a>" : '');
-
-                    $telegram->send($request->user->telegram_user_id, $text);
-                }
-
-                $matchCount++;
-            }
-        }
+            });
 
         if ($matchCount > 0) {
             Log::info("Property {$property->bina_id} matched {$matchCount} requests");
