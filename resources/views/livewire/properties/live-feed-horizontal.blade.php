@@ -49,33 +49,55 @@ new class extends Component {
                 <a :href="item.url"
                    target="_blank"
                    :class="item.isNew ? 'feed-card-new' : ''"
-                   class="feed-card shrink-0 relative overflow-hidden rounded-xl border border-white/10 hover:border-white/25 transition-all hover:scale-[1.02] hover:shadow-xl"
-                   style="width: 150px; height: 110px;">
+                   x-data
+                   @mousemove="
+                       $el.style.transition = 'transform 0.06s linear, box-shadow 0.06s linear';
+                       const r = $el.getBoundingClientRect();
+                       const x = $event.clientX - r.left, y = $event.clientY - r.top;
+                       const cx = r.width/2, cy = r.height/2;
+                       const rx = ((y-cy)/cy)*-18, ry = ((x-cx)/cx)*18;
+                       $el.style.transform = `perspective(500px) rotateX(${rx}deg) rotateY(${ry}deg) scale3d(1.06,1.06,1.06)`;
+                       $el.style.boxShadow = `${-ry*2}px ${rx*2}px 20px rgba(0,0,0,0.5)`;
+                   "
+                   @mouseleave="
+                       $el.style.transition = 'transform 0.4s ease, box-shadow 0.4s ease';
+                       $el.style.transform = 'perspective(500px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
+                       $el.style.boxShadow = '';
+                   "
+                   class="feed-card shrink-0 relative block rounded-xl border border-white/10"
+                   style="width:150px;height:110px;will-change:transform;transform-style:preserve-3d;">
 
-                    {{-- BG image --}}
-                    <template x-if="item.thumb">
-                        <img :src="item.thumb" class="absolute inset-0 w-full h-full object-cover">
-                    </template>
-                    <template x-if="!item.thumb">
-                        <div class="absolute inset-0" style="background: linear-gradient(135deg, #312e81 0%, #1e3a5f 100%)"></div>
-                    </template>
+                    {{-- Clipping wrapper --}}
+                    <div class="absolute inset-0 overflow-hidden rounded-xl">
 
-                    {{-- Gradient overlay --}}
-                    <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 55%, rgba(0,0,0,0.05) 100%)"></div>
+                        {{-- BG image --}}
+                        <template x-if="item.thumb">
+                            <img :src="item.thumb" class="absolute inset-0 w-full h-full object-cover">
+                        </template>
+                        <template x-if="!item.thumb">
+                            <div class="absolute inset-0" style="background: linear-gradient(135deg, #312e81 0%, #1e3a5f 100%)"></div>
+                        </template>
+
+                        {{-- Gradient overlay --}}
+                        <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 55%, rgba(0,0,0,0.05) 100%)"></div>
+                    </div>
 
                     {{-- NEW badge --}}
                     <template x-if="item.isNew">
-                        <span class="absolute top-1.5 right-1.5 blink-soft rounded-sm bg-emerald-500/30 border border-emerald-500/50 px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest text-emerald-400 backdrop-blur-sm">YENİ</span>
+                        <span class="absolute top-1.5 right-1.5 blink-soft rounded-sm bg-emerald-500/30 border border-emerald-500/50 px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest text-emerald-400 backdrop-blur-sm"
+                              style="transform: translateZ(14px);">YENİ</span>
                     </template>
 
                     {{-- Category chip --}}
                     <template x-if="item.category">
                         <span class="absolute top-1.5 left-1.5 rounded-md bg-black/40 backdrop-blur-sm px-1.5 py-0.5 text-[9px] text-white/70"
-                              x-text="item.category"></span>
+                              x-text="item.category"
+                              style="transform: translateZ(10px);"></span>
                     </template>
 
                     {{-- Info overlay --}}
-                    <div class="absolute bottom-0 left-0 right-0 px-2 pb-2">
+                    <div class="absolute bottom-0 left-0 right-0 px-2 pb-2"
+                         style="transform: translateZ(18px);">
                         <div class="text-sm font-bold text-white leading-tight drop-shadow"
                              x-text="item.price || '—'"></div>
                         <div class="flex items-center gap-1 mt-0.5">
@@ -103,19 +125,78 @@ new class extends Component {
 
 <style>
 .feed-card {
-    animation: cardSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: cardFadeIn 0.4s ease both;
 }
-@keyframes cardSlideIn {
-    from { opacity: 0; transform: translateX(-16px) scale(0.97); }
-    to   { opacity: 1; transform: translateX(0) scale(1); }
+@keyframes cardFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
 }
 .feed-card-new {
-    box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
-    border-color: rgba(16, 185, 129, 0.3) !important;
+    animation: cardFadeIn 0.4s ease both, glowBlink 30s ease-out forwards;
+}
+@keyframes glowBlink {
+    0%   { box-shadow: 0 0 5px rgba(16,185,129,0.5); border-color: rgba(16,185,129,0.7) !important; }
+    2%   { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    4%   { box-shadow: 0 0 5px rgba(16,185,129,0.5); border-color: rgba(16,185,129,0.7) !important; }
+    6%   { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    8%   { box-shadow: 0 0 5px rgba(16,185,129,0.5); border-color: rgba(16,185,129,0.7) !important; }
+    10%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    12%  { box-shadow: 0 0 5px rgba(16,185,129,0.5); border-color: rgba(16,185,129,0.7) !important; }
+    14%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    16%  { box-shadow: 0 0 5px rgba(16,185,129,0.5); border-color: rgba(16,185,129,0.7) !important; }
+    18%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    20%  { box-shadow: 0 0 4px rgba(16,185,129,0.4); border-color: rgba(16,185,129,0.6) !important; }
+    22%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    24%  { box-shadow: 0 0 4px rgba(16,185,129,0.4); border-color: rgba(16,185,129,0.6) !important; }
+    26%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    30%  { box-shadow: 0 0 4px rgba(16,185,129,0.4); border-color: rgba(16,185,129,0.6) !important; }
+    33%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    37%  { box-shadow: 0 0 4px rgba(16,185,129,0.3); border-color: rgba(16,185,129,0.5) !important; }
+    40%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    45%  { box-shadow: 0 0 3px rgba(16,185,129,0.3); border-color: rgba(16,185,129,0.4) !important; }
+    50%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    57%  { box-shadow: 0 0 3px rgba(16,185,129,0.2); border-color: rgba(16,185,129,0.3) !important; }
+    63%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    72%  { box-shadow: 0 0 2px rgba(16,185,129,0.2); border-color: rgba(16,185,129,0.3) !important; }
+    80%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    92%  { box-shadow: 0 0 2px rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.2) !important; }
+    100% { box-shadow: none;                         border-color: rgba(255,255,255,0.1) !important; }
 }
 </style>
 
 <script>
+function cardParallax() {
+    return {
+        rx: 0, ry: 0, mx: 0, my: 0, hovering: false,
+        get cardStyle() {
+            if (!this.hovering) return 'transform: rotateX(0deg) rotateY(0deg) translate(0px,0px) scale(1); transition: transform 0.5s ease;';
+            const tx = this.mx * 6;
+            const ty = this.my * 6;
+            return `transform: rotateX(${this.rx}deg) rotateY(${this.ry}deg) translate(${tx}px,${ty}px) scale(1.05); transition: transform 0.1s ease; box-shadow: 0 12px 28px rgba(0,0,0,0.6);`;
+        },
+        layerStyle(depth) {
+            if (!this.hovering) return 'transform: translate(0,0); transition: transform 0.5s ease;';
+            const tx = this.mx * depth * 1.5;
+            const ty = this.my * depth * 1.5;
+            return `transform: translate(${tx}px, ${ty}px); transition: transform 0.1s ease;`;
+        },
+        move(e) {
+            this.hovering = true;
+            const r = e.currentTarget.getBoundingClientRect();
+            const x = (e.clientX - r.left) / r.width  - 0.5;
+            const y = (e.clientY - r.top)  / r.height - 0.5;
+            this.ry =  x * 15;
+            this.rx = -y * 15;
+            this.mx =  x;
+            this.my =  y;
+        },
+        leave() {
+            this.hovering = false;
+            this.rx = 0; this.ry = 0; this.mx = 0; this.my = 0;
+        },
+    };
+}
+
 function liveFeedH(initialMaxId) {
     return {
         items: [],
