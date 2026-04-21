@@ -20,6 +20,7 @@ Route::middleware('auth')->group(function () {
 
     Volt::route('/dashboard', 'dashboard.index')->name('dashboard');
     Volt::route('/properties', 'properties.index')->name('properties.index');
+    Volt::route('/properties/saved', 'properties.saved-lists')->name('properties.saved');
     Volt::route('/customers', 'customers.index')->name('customers.index');
     Route::get('/customer-requests', fn() => redirect()->route('customers.index'))->name('customer-requests.index');
     Route::get('/matches', fn() => redirect()->route('customers.index'))->name('matches.index');

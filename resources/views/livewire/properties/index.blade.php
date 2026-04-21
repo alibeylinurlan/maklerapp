@@ -117,9 +117,18 @@ new class extends Component {
             return ['canAccess' => false, 'properties' => collect(), 'categories' => collect(), 'locations' => collect(), 'totalCount' => 0];
         }
 
+        $properties = $query->paginate(24);
+
+        $savedPropertyIds = \App\Models\SavedListItem::whereHas('savedList', fn($q) => $q->where('user_id', auth()->id()))
+            ->whereIn('property_id', $properties->pluck('id'))
+            ->pluck('property_id')
+            ->flip()
+            ->toArray();
+
         return [
             'canAccess' => true,
-            'properties' => $query->paginate(24),
+            'properties' => $properties,
+            'savedPropertyIds' => $savedPropertyIds,
             'categories' => Category::where('is_active', true)->get(),
             'locations' => Location::where('is_active', true)->orderBy('name_az')->get(),
             'totalCount' => Property::where('is_owner', true)->where('bumped_at', '>=', now()->subMonths(3))->count(),
@@ -286,11 +295,10 @@ new class extends Component {
             }
             $delay = ($loop->index % 12) * 40;
         @endphp
-        <a href="{{ $property->full_url }}" target="_blank"
-           style="animation: fadeSlideUp 0.4s ease both; animation-delay: {{ $delay }}ms;"
-           class="property-card group flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-md hover:-translate-y-0.5 dark:border-zinc-700 dark:bg-zinc-800">
+        <div style="animation: fadeSlideUp 0.4s ease both; animation-delay: {{ $delay }}ms;"
+             class="property-card group flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-md hover:-translate-y-0.5 dark:border-zinc-700 dark:bg-zinc-800">
             {{-- Photo --}}
-            <div class="relative aspect-[4/3] overflow-hidden bg-zinc-200 dark:bg-zinc-700">
+            <a href="{{ $property->full_url }}" target="_blank" class="relative block aspect-[4/3] overflow-hidden bg-zinc-200 dark:bg-zinc-700">
                 @if($thumb)
                     <img src="{{ $thumb }}" alt="" class="h-full w-full object-cover transition duration-300 group-hover:scale-105" loading="lazy">
                 @else
@@ -299,17 +307,30 @@ new class extends Component {
                     </div>
                 @endif
 
-
                 {{-- Category badge --}}
                 @if($property->category)
                 <div class="absolute top-2 left-2 rounded-md bg-black/50 px-1.5 py-0.5 text-xs text-white">
                     {{ $property->category->name_az }}
                 </div>
                 @endif
-            </div>
+
+                {{-- Save button --}}
+                @php $isSaved = isset($savedPropertyIds[$property->id]); @endphp
+                <button
+                    x-data="{ saved: {{ $isSaved ? 'true' : 'false' }} }"
+                    x-on:bookmark-changed.window="if ($event.detail.propertyId == {{ $property->id }}) saved = $event.detail.isSaved"
+                    onclick="event.preventDefault(); event.stopPropagation(); Livewire.dispatch('save-property', { propertyId: {{ $property->id }} })"
+                    :class="saved ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-black/50 hover:bg-indigo-500'"
+                    class="absolute bottom-2 right-2 flex items-center justify-center size-7 rounded-full text-white backdrop-blur-sm transition-all"
+                    title="Siyahıya əlavə et">
+                    <svg class="size-4" :fill="saved ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                    </svg>
+                </button>
+            </a>
 
             {{-- Info --}}
-            <div class="flex flex-1 flex-col gap-1 p-3">
+            <a href="{{ $property->full_url }}" target="_blank" class="flex flex-1 flex-col gap-1 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                 {{-- Price --}}
                 <div class="text-base font-bold text-zinc-900 dark:text-white">
                     @if($property->price)
@@ -349,8 +370,8 @@ new class extends Component {
                 <div class="mt-auto pt-1 text-xs text-zinc-400">
                     {{ $property->bumped_at?->format('d.m.Y H:i') }}
                 </div>
-            </div>
-        </a>
+            </a>
+        </div>
         @endforeach
     </div>
     @endif
@@ -372,6 +393,7 @@ new class extends Component {
 
     </div>{{-- end two-column --}}
 </div>
+@livewire('properties.save-modal', key('save-modal'))
 </div>
 @endif
 

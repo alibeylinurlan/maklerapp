@@ -91,8 +91,13 @@
                     icon="building-office"
                     :icon:trailing="$hasPlatform ? null : 'lock-closed'"
                     :href="route('properties.index')"
-                    :current="request()->routeIs('properties.*')"
+                    :current="request()->routeIs('properties.index')"
                 >Elanlar</flux:navlist.item>
+                <flux:navlist.item
+                    icon="bookmark"
+                    :href="route('properties.saved')"
+                    :current="request()->routeIs('properties.saved')"
+                >Saxlanılanlar</flux:navlist.item>
             </flux:navlist.group>
 
             <flux:navlist.group heading="Müştərilərim">
