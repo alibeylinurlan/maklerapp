@@ -58,46 +58,53 @@ new class extends Component {
                        const rx = ((y-cy)/cy)*-18, ry = ((x-cx)/cx)*18;
                        $el.style.transform = `perspective(500px) rotateX(${rx}deg) rotateY(${ry}deg) scale3d(1.06,1.06,1.06)`;
                        $el.style.boxShadow = `${-ry*2}px ${rx*2}px 20px rgba(0,0,0,0.5)`;
+                       $el.querySelectorAll('[data-depth]').forEach(child => {
+                           const d = parseFloat(child.dataset.depth);
+                           const tx = ry * 0.01745 * d;
+                           const ty = -rx * 0.01745 * d;
+                           child.style.transition = 'transform 0.06s linear';
+                           child.style.transform = `translate(${tx}px, ${ty}px)`;
+                       });
                    "
                    @mouseleave="
                        $el.style.transition = 'transform 0.4s ease, box-shadow 0.4s ease';
                        $el.style.transform = 'perspective(500px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
                        $el.style.boxShadow = '';
+                       $el.querySelectorAll('[data-depth]').forEach(child => {
+                           child.style.transition = 'transform 0.4s ease';
+                           child.style.transform = 'translate(0,0)';
+                       });
                    "
                    class="feed-card shrink-0 relative block rounded-xl border border-white/10"
-                   style="width:150px;height:110px;will-change:transform;transform-style:preserve-3d;">
+                   style="width:150px;height:110px;overflow:hidden;will-change:transform;">
 
-                    {{-- Clipping wrapper --}}
-                    <div class="absolute inset-0 overflow-hidden rounded-xl">
+                    {{-- BG image --}}
+                    <template x-if="item.thumb">
+                        <img :src="item.thumb" class="absolute inset-0 w-full h-full object-cover rounded-xl">
+                    </template>
+                    <template x-if="!item.thumb">
+                        <div class="absolute inset-0 rounded-xl" style="background: linear-gradient(135deg, #312e81 0%, #1e3a5f 100%)"></div>
+                    </template>
 
-                        {{-- BG image --}}
-                        <template x-if="item.thumb">
-                            <img :src="item.thumb" class="absolute inset-0 w-full h-full object-cover">
-                        </template>
-                        <template x-if="!item.thumb">
-                            <div class="absolute inset-0" style="background: linear-gradient(135deg, #312e81 0%, #1e3a5f 100%)"></div>
-                        </template>
-
-                        {{-- Gradient overlay --}}
-                        <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 55%, rgba(0,0,0,0.05) 100%)"></div>
-                    </div>
+                    {{-- Gradient overlay --}}
+                    <div class="absolute inset-0 rounded-xl" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 55%, rgba(0,0,0,0.05) 100%)"></div>
 
                     {{-- NEW badge --}}
                     <template x-if="item.isNew">
-                        <span class="absolute top-1.5 right-1.5 blink-soft rounded-sm bg-emerald-500/30 border border-emerald-500/50 px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest text-emerald-400 backdrop-blur-sm"
-                              style="transform: translateZ(14px);">YENİ</span>
+                        <span class="absolute top-1.5 right-1.5 blink-soft rounded-sm bg-emerald-500/30 border border-emerald-500/50 px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest text-emerald-400"
+                              data-depth="20">YENİ</span>
                     </template>
 
                     {{-- Category chip --}}
                     <template x-if="item.category">
-                        <span class="absolute top-1.5 left-1.5 rounded-md bg-black/40 backdrop-blur-sm px-1.5 py-0.5 text-[9px] text-white/70"
+                        <span class="absolute top-1.5 left-1.5 rounded-md bg-black/40 px-1.5 py-0.5 text-[9px] text-white/70"
                               x-text="item.category"
-                              style="transform: translateZ(10px);"></span>
+                              data-depth="12"></span>
                     </template>
 
                     {{-- Info overlay --}}
                     <div class="absolute bottom-0 left-0 right-0 px-2 pb-2"
-                         style="transform: translateZ(18px);">
+                         data-depth="28">
                         <div class="text-sm font-bold text-white leading-tight drop-shadow"
                              x-text="item.price || '—'"></div>
                         <div class="flex items-center gap-1 mt-0.5">
