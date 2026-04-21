@@ -208,6 +208,10 @@ new class extends Component {
 </style>
 
 <script>
+const LIVEFEED_MAX = 14;
+const LIVEFEED_KEY = 'livefeed_items';
+const LIVEFEED_PERSIST_KEY = 'livefeed_persist';
+
 function liveFeed(initialMaxId) {
     return {
         items: [],
@@ -216,7 +220,35 @@ function liveFeed(initialMaxId) {
         tick: Date.now(),
         lastId: initialMaxId,
 
+        isPersist() {
+            return localStorage.getItem(LIVEFEED_PERSIST_KEY) === 'true';
+        },
+
+        loadSaved() {
+            if (!this.isPersist()) return;
+            try {
+                const saved = JSON.parse(localStorage.getItem(LIVEFEED_KEY) || '[]');
+                if (Array.isArray(saved) && saved.length) {
+                    const now = Date.now();
+                    this.items = saved.map(i => ({
+                        ...i,
+                        isNew: i.isNew && i.addedAt && (now - i.addedAt) < 30000
+                    }));
+                    const maxSaved = Math.max(...saved.map(i => i.id || 0));
+                    if (maxSaved > this.lastId) this.lastId = maxSaved;
+                }
+            } catch(e) {}
+        },
+
+        save() {
+            if (!this.isPersist()) return;
+            try {
+                localStorage.setItem(LIVEFEED_KEY, JSON.stringify(this.items.slice(0, LIVEFEED_MAX)));
+            } catch(e) {}
+        },
+
         init() {
+            this.loadSaved();
             this.connect();
 
             setInterval(() => {
@@ -242,13 +274,18 @@ function liveFeed(initialMaxId) {
             if (this.items.some(i => i.id === data.id)) return;
             if (data.id > this.lastId) this.lastId = data.id;
 
-            const item = { ...data, isNew, created_at: data.created_at ?? new Date().toISOString() };
-            this.items = [item, ...this.items].slice(0, 50);
+            const item = { ...data, isNew, addedAt: isNew ? Date.now() : (data.addedAt || null), created_at: data.created_at ?? new Date().toISOString() };
+            const updated = [item, ...this.items];
+            if (updated.length > LIVEFEED_MAX) {
+                updated.splice(LIVEFEED_MAX); // sonuncunu çıxar
+            }
+            this.items = updated;
+            this.save();
 
             if (isNew) {
                 setTimeout(() => {
                     const found = this.items.find(i => i.id === item.id);
-                    if (found) found.isNew = false;
+                    if (found) { found.isNew = false; this.save(); }
                 }, 30000);
             }
         },

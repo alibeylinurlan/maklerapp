@@ -124,7 +124,35 @@ function liveFeedH(initialMaxId) {
         tick: Date.now(),
         lastId: initialMaxId,
 
+        isPersist() {
+            return localStorage.getItem('livefeed_persist') === 'true';
+        },
+
+        loadSaved() {
+            if (!this.isPersist()) return;
+            try {
+                const saved = JSON.parse(localStorage.getItem('livefeed_items') || '[]');
+                if (Array.isArray(saved) && saved.length) {
+                    const now = Date.now();
+                    this.items = saved.map(i => ({
+                        ...i,
+                        isNew: i.isNew && i.addedAt && (now - i.addedAt) < 30000
+                    }));
+                    const maxSaved = Math.max(...saved.map(i => i.id || 0));
+                    if (maxSaved > this.lastId) this.lastId = maxSaved;
+                }
+            } catch(e) {}
+        },
+
+        save() {
+            if (!this.isPersist()) return;
+            try {
+                localStorage.setItem('livefeed_items', JSON.stringify(this.items.slice(0, 14)));
+            } catch(e) {}
+        },
+
         init() {
+            this.loadSaved();
             this.connect();
             setInterval(() => {
                 this.tick = Date.now();
@@ -145,12 +173,15 @@ function liveFeedH(initialMaxId) {
         addItem(data, isNew = true) {
             if (this.items.some(i => i.id === data.id)) return;
             if (data.id > this.lastId) this.lastId = data.id;
-            const item = { ...data, isNew, created_at: data.created_at ?? new Date().toISOString() };
-            this.items = [item, ...this.items].slice(0, 40);
+            const item = { ...data, isNew, addedAt: isNew ? Date.now() : (data.addedAt || null), created_at: data.created_at ?? new Date().toISOString() };
+            const updated = [item, ...this.items];
+            if (updated.length > 14) updated.splice(14);
+            this.items = updated;
+            this.save();
             if (isNew) {
                 setTimeout(() => {
                     const found = this.items.find(i => i.id === item.id);
-                    if (found) found.isNew = false;
+                    if (found) { found.isNew = false; this.save(); }
                 }, 30000);
             }
         },
