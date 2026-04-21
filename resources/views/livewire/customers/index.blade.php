@@ -355,8 +355,8 @@ new class extends Component {
         // Left panel: customer list
         $customerQuery = Customer::whereIn('user_id', $visibleUserIds)
             ->withCount('requests')
-            ->withCount(['requests as new_matches_count' => function ($q) {
-                $q->whereHas('matches', fn($m) => $m->where('status', 'new'));
+            ->withCount(['matches as new_matches_count' => function ($q) {
+                $q->where('status', 'new');
             }])
             ->with('user:id,name')
             ->orderByDesc('last_activity_at');
@@ -447,7 +447,7 @@ new class extends Component {
 
         {{-- Search --}}
         <div class="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
-            <flux:input wire:model.live.debounce.300ms="search" placeholder="Axtar..." icon="magnifying-glass" size="sm" />
+            <flux:input wire:model.live.debounce.600ms="search" placeholder="Axtar..." icon="magnifying-glass" size="sm" />
         </div>
 
         {{-- Customer list --}}
@@ -479,7 +479,10 @@ new class extends Component {
                     <div class="flex flex-col items-end gap-1 shrink-0">
                         <span class="flex flex-col items-end gap-1">
                             @if($customer->new_matches_count > 0)
-                                <span class="size-2.5 rounded-full bg-green-500 block"></span>
+                                <span class="inline-flex items-center justify-center rounded-full bg-green-500 text-white font-medium leading-none"
+                                      style="min-width:1.1rem;height:1.1rem;font-size:0.65rem;padding:0 3px">
+                                    {{ $customer->new_matches_count > 99 ? '99+' : $customer->new_matches_count }}
+                                </span>
                             @endif
                             @if($customer->requests_count > 0)
                                 <span class="text-xs text-zinc-400">{{ $customer->requests_count }} istək</span>

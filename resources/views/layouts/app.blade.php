@@ -12,7 +12,59 @@
         .eye-char { display: inline-block; transition: transform 0.5s ease; }
     </style>
 </head>
-<body class="min-h-screen bg-zinc-50 dark:bg-zinc-900">
+<body class="min-h-screen bg-zinc-50 dark:bg-zinc-900" style="position:relative;overflow-x:hidden;">
+
+    {{-- Color washes --}}
+    <div class="app-wash app-wash-1"></div>
+    <div class="app-wash app-wash-2"></div>
+    <div class="app-wash app-wash-3"></div>
+
+    <style>
+    .app-wash {
+        position: fixed;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 0;
+    }
+    .app-wash-1 {
+        width: 70vw; height: 70vw;
+        background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 65%);
+        top: -20vw; right: -15vw;
+        animation: appDrift1 12s ease-in-out infinite alternate;
+    }
+    .app-wash-2 {
+        width: 60vw; height: 60vw;
+        background: radial-gradient(circle, rgba(14,165,233,0.10) 0%, transparent 65%);
+        bottom: -15vw; left: -10vw;
+        animation: appDrift2 16s ease-in-out infinite alternate;
+    }
+    .app-wash-3 {
+        width: 50vw; height: 50vw;
+        background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 65%);
+        bottom: 5vw; right: 5vw;
+        animation: appDrift3 20s ease-in-out infinite alternate;
+    }
+    .dark .app-wash-1 { background: radial-gradient(circle, rgba(99,102,241,0.10) 0%, transparent 65%); }
+    .dark .app-wash-2 { background: radial-gradient(circle, rgba(14,165,233,0.08) 0%, transparent 65%); }
+    .dark .app-wash-3 { background: radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 65%); }
+    @keyframes appDrift1 {
+        from { transform: translate(0, 0) scale(1); }
+        to   { transform: translate(-3vw, 4vh) scale(1.06); }
+    }
+    @keyframes appDrift2 {
+        from { transform: translate(0, 0) scale(1); }
+        to   { transform: translate(4vw, -3vh) scale(1.05); }
+    }
+    @keyframes appDrift3 {
+        from { transform: translate(0, 0) scale(1); }
+        to   { transform: translate(-2vw, -4vh) scale(1.04); }
+    }
+    /* Bütün content z-index üstdə olsun */
+    flux-sidebar, [data-flux-sidebar], .flux-main, [data-flux-main] {
+        position: relative;
+        z-index: 1;
+    }
+    </style>
     @auth
     <flux:sidebar sticky stashable class="border-r border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 lg:w-64">
         <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
@@ -82,7 +134,7 @@
         @if(!$isAdminOrSuper)
         <flux:navlist variant="outline">
             <flux:navlist.item icon="credit-card" :href="route('pricing')" :current="request()->routeIs('pricing')">
-                Paketlər
+                Tariflər
             </flux:navlist.item>
         </flux:navlist>
         @endif

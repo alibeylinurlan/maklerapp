@@ -6,8 +6,13 @@ use Livewire\Volt\Volt;
 // Guest routes
 Route::middleware('guest')->group(function () {
     Volt::route('/login', 'auth.login')->name('login');
-    Volt::route('/register', 'auth.register')->name('register');
+    // Qeydiyyat müvəqqəti bağlıdır
+    // Volt::route('/register', 'auth.register')->name('register');
+    Route::get('/register', fn() => redirect()->route('login'))->name('register');
 });
+
+// Public routes
+Volt::route('/pricing', 'pricing')->name('pricing');
 
 // Auth routes
 Route::middleware('auth')->group(function () {
@@ -18,7 +23,6 @@ Route::middleware('auth')->group(function () {
     Volt::route('/customers', 'customers.index')->name('customers.index');
     Route::get('/customer-requests', fn() => redirect()->route('customers.index'))->name('customer-requests.index');
     Route::get('/matches', fn() => redirect()->route('customers.index'))->name('matches.index');
-    Volt::route('/pricing', 'pricing')->name('pricing');
     Volt::route('/settings', 'settings.index')->name('settings');
 
     // Developer test route

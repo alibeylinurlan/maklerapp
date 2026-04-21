@@ -46,4 +46,9 @@ class Customer extends Model
     {
         return $this->hasMany(CustomerRequest::class);
     }
+
+    public function matches(): HasMany
+    {
+        return $this->hasMany(\App\Models\PropertyMatch::class);
+    }
 }
