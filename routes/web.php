@@ -55,10 +55,11 @@ Route::middleware('auth')->group(function () {
     });
 
     // Admin panel
-    Route::middleware('role:superadmin|admin')->prefix('admin')->group(function () {
+    Route::middleware('role:superadmin|admin|developer')->prefix('admin')->group(function () {
         Volt::route('/users', 'admin.users.index')->name('admin.users');
         Volt::route('/roles', 'admin.roles.index')->name('admin.roles');
         Volt::route('/plans', 'admin.plans.index')->name('admin.plans');
+        Volt::route('/locations', 'admin.locations.index')->name('admin.locations');
     });
 
     Route::get('/api/properties/new', function () {

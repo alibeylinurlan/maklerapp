@@ -68,7 +68,9 @@ new class extends Component {
             $query->where('category_id', $this->categoryId);
         }
         if (!empty($this->locationIds)) {
-            $query->whereIn('location_id', $this->locationIds);
+            $level1 = \App\Models\Location::whereIn('parent_id', $this->locationIds)->pluck('id')->toArray();
+            $level2 = $level1 ? \App\Models\Location::whereIn('parent_id', $level1)->pluck('id')->toArray() : [];
+            $query->whereIn('location_id', array_merge($this->locationIds, $level1, $level2));
         }
         if ($this->roomMin) {
             $query->where('rooms', '>=', $this->roomMin);

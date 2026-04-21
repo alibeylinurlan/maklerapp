@@ -120,9 +120,10 @@
         </flux:navlist>
         @endif
 
-        @if(auth()->user()->hasAnyRole(['superadmin', 'admin']))
+        @if(auth()->user()->hasAnyRole(['superadmin', 'admin', 'developer']))
         <flux:navlist variant="outline">
             <flux:navlist.group heading="Admin">
+                @if(auth()->user()->hasAnyRole(['superadmin', 'admin']))
                 <flux:navlist.item icon="user-group" :href="route('admin.users')" :current="request()->routeIs('admin.users')">
                     İstifadəçilər
                 </flux:navlist.item>
@@ -131,6 +132,10 @@
                 </flux:navlist.item>
                 <flux:navlist.item icon="credit-card" :href="route('admin.plans')" :current="request()->routeIs('admin.plans')">
                     Abunəliklər
+                </flux:navlist.item>
+                @endif
+                <flux:navlist.item icon="map-pin" :href="route('admin.locations')" :current="request()->routeIs('admin.locations')">
+                    Ərazilər
                 </flux:navlist.item>
             </flux:navlist.group>
         </flux:navlist>
