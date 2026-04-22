@@ -43,9 +43,12 @@
         <flux:spacer />
 
         <flux:navlist variant="outline">
-            <flux:navlist.item icon="arrow-right-start-on-rectangle" href="#" wire:click.prevent="$dispatch('logout')">
-                Çıxış
-            </flux:navlist.item>
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <flux:navlist.item icon="arrow-right-start-on-rectangle" href="#" onclick="this.closest('form').submit()">
+                    Çıxış
+                </flux:navlist.item>
+            </form>
         </flux:navlist>
 
         <div class="border-t border-zinc-200 px-3 py-3 dark:border-zinc-700">

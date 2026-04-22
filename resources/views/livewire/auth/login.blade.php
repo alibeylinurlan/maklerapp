@@ -1,21 +1,25 @@
 <?php
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Livewire\Volt\Component;
 
 new class extends Component {
-    public string $email = '';
-    public string $password = '';
     public bool $remember = false;
 
-    public function login(): void
+    public function login(string $email = '', string $password = ''): void
     {
-        $this->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+        $v = Validator::make(
+            ['email' => $email, 'password' => $password],
+            ['email' => 'required|email', 'password' => 'required']
+        );
 
-        if (!Auth::attempt(['email' => $this->email, 'password' => $this->password], $this->remember)) {
+        if ($v->fails()) {
+            $this->addError('email', $v->errors()->first());
+            return;
+        }
+
+        if (!Auth::attempt(['email' => $email, 'password' => $password], $this->remember)) {
             $this->addError('email', 'Email və ya şifrə yanlışdır.');
             return;
         }
@@ -46,16 +50,16 @@ new class extends Component {
 
         {{-- Form card --}}
         <div class="login-form-card">
-            <form wire:submit="login" class="space-y-5">
+            <form @submit.prevent="$wire.login($el.querySelector('[name=email]').value, $el.querySelector('[name=password]').value)" class="space-y-5">
                 <div>
                     <label class="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-1.5">Email</label>
-                    <input wire:model="email" type="email" placeholder="email@example.com" autocomplete="email"
+                    <input name="email" type="email" placeholder="email@example.com" autocomplete="email"
                            class="login-input" />
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-1.5">Şifrə</label>
-                    <input wire:model="password" type="password" placeholder="••••••••" autocomplete="current-password"
+                    <input name="password" type="password" placeholder="••••••••" autocomplete="current-password"
                            class="login-input" />
                 </div>
 
@@ -72,16 +76,14 @@ new class extends Component {
                 </div>
 
                 <button type="submit"
-                        class="login-btn w-full"
+                        class="login-btn w-full flex items-center justify-center gap-2"
                         wire:loading.attr="disabled">
+                    <svg wire:loading class="size-4 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
                     <span wire:loading.remove>Daxil ol</span>
-                    <span wire:loading class="flex items-center justify-center gap-2">
-                        <svg class="size-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                        </svg>
-                        Gözləyin...
-                    </span>
+                    <span wire:loading>Gözləyin...</span>
                 </button>
             </form>
 

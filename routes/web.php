@@ -93,7 +93,7 @@ Route::middleware('auth')->group(function () {
         return response()->json($props);
     })->name('api.properties.new');
 
-    Route::post('/logout', function () {
+    Route::match(['get', 'post'], '/logout', function () {
         auth()->logout();
         session()->invalidate();
         session()->regenerateToken();
