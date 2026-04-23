@@ -131,9 +131,9 @@ new class extends Component {
             'canAccess' => true,
             'properties' => $properties,
             'savedPropertyIds' => $savedPropertyIds,
-            'categories' => Category::where('is_active', true)->get(),
-            'locations' => Location::where('is_active', true)->orderBy('name_az')->get(),
-            'totalCount' => Property::where('is_owner', true)->where('bumped_at', '>=', now()->subMonths(3))->count(),
+            'categories' => cache()->remember('properties:categories', 300, fn() => Category::where('is_active', true)->get()),
+            'locations' => cache()->remember('properties:locations', 300, fn() => Location::where('is_active', true)->orderBy('name_az')->get()),
+            'totalCount' => cache()->remember('properties:total_count', 60, fn() => Property::where('is_owner', true)->where('bumped_at', '>=', now()->subMonths(3))->count()),
         ];
     }
 }; ?>
