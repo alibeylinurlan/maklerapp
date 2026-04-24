@@ -5,13 +5,13 @@
         </div>
         <h2 class="text-xl font-bold text-zinc-800 dark:text-white">{{ $pageTitle ?? 'Bu bölmə' }} bağlıdır</h2>
         <p class="mt-2 text-zinc-500 dark:text-zinc-400">
-            Bu bölməni açmaq üçün <strong class="text-zinc-700 dark:text-zinc-200">{{ $planName ?? 'müvafiq paket' }}</strong> tələb olunur.
+            Bu bölməni açmaq üçün <strong class="text-zinc-700 dark:text-zinc-200">{{ $planName ?? 'müvafiq tarif' }}</strong> tələb olunur.
         </p>
         <div class="mt-6">
             <a href="{{ route('pricing') }}"
                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700">
                 <flux:icon.credit-card class="size-4" />
-                Paketlərə bax
+                Tariflərə bax
             </a>
         </div>
     </div>

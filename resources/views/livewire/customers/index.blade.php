@@ -13,6 +13,8 @@ use Livewire\Attributes\Url;
 new class extends Component {
     use WithPagination;
 
+    public bool $canAccess = false;
+
     // Left panel
     public string $search = '';
     public int $customerLimit = 30;
@@ -347,10 +349,19 @@ new class extends Component {
     public function with(): array
     {
         $user = auth()->user();
+        $this->canAccess = $user->hasAnyRole(['superadmin', 'admin', 'developer']) || $user->hasFeature('customers');
+
+        if (!$this->canAccess) {
+            return ['canAccess' => false, 'customers' => collect(), 'hasMoreCustomers' => false,
+                    'hasChildren' => false, 'selectedCustomer' => null, 'canUseRequests' => false,
+                    'requests' => collect(), 'selectedRequest' => null, 'matches' => collect(),
+                    'matchCounts' => [], 'categories' => collect(), 'locations' => collect()];
+        }
+
         $childIds = $user->childrenIds();
         $visibleUserIds = array_merge([$user->id], $childIds);
         $hasChildren = count($childIds) > 0;
-        $canUseRequests = $user->hasAnyRole(['superadmin', 'admin']) || $user->hasPlan('requests');
+        $canUseRequests = $user->hasAnyRole(['superadmin', 'admin']) || $user->hasFeature('requests');
 
         // Left panel: customer list
         $customerQuery = Customer::whereIn('user_id', $visibleUserIds)
@@ -432,6 +443,9 @@ new class extends Component {
 }; ?>
 
 <div>
+@if(!$canAccess)
+    @include('livewire.partials.plan-gate', ['pageTitle' => 'Müştərilər', 'planName' => 'Gold və ya yuxarı paket'])
+@else
 <div class="flex flex-col" style="height: calc(100vh - 4rem); gap: 0.625rem;">
 <div class="flex gap-0 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-md flex-1 min-h-0">
 
@@ -784,7 +798,7 @@ new class extends Component {
 {{-- ════ CANLI ELANLAR (horizontal) ════ --}}
 <div class="rounded-2xl overflow-hidden border border-white/10 shadow-xl shrink-0"
      style="min-height: 170px; background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 60%, #064e3b 100%);">
-    @livewire('properties.live-feed-horizontal', key('live-feed-horizontal'))
+    <x-live-feed-horizontal />
 </div>
 
 </div>{{-- end flex-col wrapper --}}
@@ -1015,4 +1029,5 @@ new class extends Component {
         </flux:button>
     </div>
 </flux:modal>
+@endif
 </div>

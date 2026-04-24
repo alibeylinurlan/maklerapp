@@ -1,17 +1,6 @@
-<?php
-use App\Models\Property;
-use Livewire\Volt\Component;
-
-new class extends Component {
-    public int $maxId = 0;
-
-    public function mount(): void
-    {
-        $this->maxId = Property::where('is_owner', true)->max('id') ?? 0;
-    }
-};
-?>
-
+@if(!$canAccess)
+<div></div>
+@else
 <div x-data="liveFeedH({{ $maxId }})"
      x-init="init()"
      class="flex flex-col h-full">
@@ -25,7 +14,6 @@ new class extends Component {
                   :class="connected ? 'bg-emerald-500' : 'bg-zinc-600'"></span>
         </span>
         <span class="text-xs font-semibold text-white/80 tracking-wide">Canlı elanlar</span>
-        <!--<span class="text-xs text-white/30 ml-1" x-show="items.length > 0" x-text="items.length + ' elan'"></span>-->
         @if(auth()->user()->hasAnyRole(['superadmin', 'admin', 'developer']))
         <button @click="sendTest()"
                 class="ml-auto rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30 transition-colors">
@@ -78,7 +66,6 @@ new class extends Component {
                    class="feed-card shrink-0 relative block rounded-xl border border-white/10"
                    style="width:150px;height:110px;overflow:hidden;will-change:transform;">
 
-                    {{-- BG image --}}
                     <template x-if="item.thumb">
                         <img :src="item.thumb" class="absolute inset-0 w-full h-full object-cover rounded-xl">
                     </template>
@@ -86,25 +73,20 @@ new class extends Component {
                         <div class="absolute inset-0 rounded-xl" style="background: linear-gradient(135deg, #312e81 0%, #1e3a5f 100%)"></div>
                     </template>
 
-                    {{-- Gradient overlay --}}
                     <div class="absolute inset-0 rounded-xl" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 55%, rgba(0,0,0,0.05) 100%)"></div>
 
-                    {{-- NEW badge --}}
                     <template x-if="item.isNew">
                         <span class="absolute top-1.5 right-1.5 blink-soft rounded-sm bg-emerald-500/30 border border-emerald-500/50 px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest text-emerald-400"
                               data-depth="20">YENİ</span>
                     </template>
 
-                    {{-- Category chip --}}
                     <template x-if="item.category">
                         <span class="absolute top-1.5 left-1.5 rounded-md bg-black/40 px-1.5 py-0.5 text-[9px] text-white/70"
                               x-text="item.category"
                               data-depth="12"></span>
                     </template>
 
-                    {{-- Info overlay --}}
-                    <div class="absolute bottom-0 left-0 right-0 px-2 pb-2"
-                         data-depth="28">
+                    <div class="absolute bottom-0 left-0 right-0 px-2 pb-2" data-depth="28">
                         <div class="text-sm font-bold text-white leading-tight drop-shadow"
                              x-text="item.price || '—'"></div>
                         <div class="flex items-center gap-1 mt-0.5">
@@ -143,67 +125,20 @@ new class extends Component {
 }
 @keyframes glowBlink {
     0%   { box-shadow: 0 0 5px rgba(16,185,129,0.5); border-color: rgba(16,185,129,0.7) !important; }
-    2%   { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    2%   { box-shadow: none; border-color: rgba(16,185,129,0.05) !important; }
     4%   { box-shadow: 0 0 5px rgba(16,185,129,0.5); border-color: rgba(16,185,129,0.7) !important; }
-    6%   { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    6%   { box-shadow: none; border-color: rgba(16,185,129,0.05) !important; }
     8%   { box-shadow: 0 0 5px rgba(16,185,129,0.5); border-color: rgba(16,185,129,0.7) !important; }
-    10%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
-    12%  { box-shadow: 0 0 5px rgba(16,185,129,0.5); border-color: rgba(16,185,129,0.7) !important; }
-    14%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
-    16%  { box-shadow: 0 0 5px rgba(16,185,129,0.5); border-color: rgba(16,185,129,0.7) !important; }
-    18%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
+    10%  { box-shadow: none; border-color: rgba(16,185,129,0.05) !important; }
     20%  { box-shadow: 0 0 4px rgba(16,185,129,0.4); border-color: rgba(16,185,129,0.6) !important; }
-    22%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
-    24%  { box-shadow: 0 0 4px rgba(16,185,129,0.4); border-color: rgba(16,185,129,0.6) !important; }
-    26%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
-    30%  { box-shadow: 0 0 4px rgba(16,185,129,0.4); border-color: rgba(16,185,129,0.6) !important; }
-    33%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
-    37%  { box-shadow: 0 0 4px rgba(16,185,129,0.3); border-color: rgba(16,185,129,0.5) !important; }
-    40%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
-    45%  { box-shadow: 0 0 3px rgba(16,185,129,0.3); border-color: rgba(16,185,129,0.4) !important; }
-    50%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
-    57%  { box-shadow: 0 0 3px rgba(16,185,129,0.2); border-color: rgba(16,185,129,0.3) !important; }
-    63%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
-    72%  { box-shadow: 0 0 2px rgba(16,185,129,0.2); border-color: rgba(16,185,129,0.3) !important; }
-    80%  { box-shadow: none;                         border-color: rgba(16,185,129,0.05) !important; }
-    92%  { box-shadow: 0 0 2px rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.2) !important; }
-    100% { box-shadow: none;                         border-color: rgba(255,255,255,0.1) !important; }
+    22%  { box-shadow: none; border-color: rgba(16,185,129,0.05) !important; }
+    40%  { box-shadow: 0 0 3px rgba(16,185,129,0.3); border-color: rgba(16,185,129,0.4) !important; }
+    50%  { box-shadow: none; border-color: rgba(16,185,129,0.05) !important; }
+    100% { box-shadow: none; border-color: rgba(255,255,255,0.1) !important; }
 }
 </style>
 
 <script>
-function cardParallax() {
-    return {
-        rx: 0, ry: 0, mx: 0, my: 0, hovering: false,
-        get cardStyle() {
-            if (!this.hovering) return 'transform: rotateX(0deg) rotateY(0deg) translate(0px,0px) scale(1); transition: transform 0.5s ease;';
-            const tx = this.mx * 6;
-            const ty = this.my * 6;
-            return `transform: rotateX(${this.rx}deg) rotateY(${this.ry}deg) translate(${tx}px,${ty}px) scale(1.05); transition: transform 0.1s ease; box-shadow: 0 12px 28px rgba(0,0,0,0.6);`;
-        },
-        layerStyle(depth) {
-            if (!this.hovering) return 'transform: translate(0,0); transition: transform 0.5s ease;';
-            const tx = this.mx * depth * 1.5;
-            const ty = this.my * depth * 1.5;
-            return `transform: translate(${tx}px, ${ty}px); transition: transform 0.1s ease;`;
-        },
-        move(e) {
-            this.hovering = true;
-            const r = e.currentTarget.getBoundingClientRect();
-            const x = (e.clientX - r.left) / r.width  - 0.5;
-            const y = (e.clientY - r.top)  / r.height - 0.5;
-            this.ry =  x * 15;
-            this.rx = -y * 15;
-            this.mx =  x;
-            this.my =  y;
-        },
-        leave() {
-            this.hovering = false;
-            this.rx = 0; this.ry = 0; this.mx = 0; this.my = 0;
-        },
-    };
-}
-
 function liveFeedH(initialMaxId) {
     return {
         items: [],
@@ -268,8 +203,8 @@ function liveFeedH(initialMaxId) {
             this.save();
             if (isNew) {
                 setTimeout(() => {
-                    const found = this.items.find(i => i.id === item.id);
-                    if (found) { found.isNew = false; this.save(); }
+                    this.items = this.items.map(i => i.id === item.id ? { ...i, isNew: false } : i);
+                    this.save();
                 }, 30000);
             }
         },
@@ -321,3 +256,4 @@ function liveFeedH(initialMaxId) {
     };
 }
 </script>
+@endif

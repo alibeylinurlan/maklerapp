@@ -36,7 +36,7 @@ new class extends Component {
         }
 
         $user = auth()->user();
-        $canAccess = $user->hasAnyRole(['superadmin', 'admin']) || $user->hasPlan('matches');
+        $canAccess = $user->hasAnyRole(['superadmin', 'admin']) || $user->hasFeature('matches');
 
         if (!$canAccess) {
             return ['canAccess' => false, 'matches' => collect(), 'counts' => []];

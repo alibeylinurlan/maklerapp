@@ -75,13 +75,6 @@
             <a href="{{ route('dashboard') }}" class="text-lg font-bold text-zinc-800 dark:text-white">Binokl.az</a>
         </div>
 
-        @php
-            $isAdminOrSuper = auth()->user()->hasAnyRole(['superadmin', 'admin']);
-            $hasPlatform = $isAdminOrSuper || auth()->user()->hasPlan('platform');
-            $hasRequests = $isAdminOrSuper || auth()->user()->hasPlan('requests');
-            $hasMatches  = $hasRequests;
-        @endphp
-
         <flux:navlist variant="outline">
             <flux:navlist.group heading="Əsas">
                 <flux:navlist.item icon="chart-bar-square" :href="route('dashboard')" :current="request()->routeIs('dashboard')">
@@ -89,12 +82,13 @@
                 </flux:navlist.item>
                 <flux:navlist.item
                     icon="building-office"
-                    :icon:trailing="$hasPlatform ? null : 'lock-closed'"
+                    :icon:trailing="user_has_feature('properties_view') ? null : 'lock-closed'"
                     :href="route('properties.index')"
                     :current="request()->routeIs('properties.index')"
                 >Elanlar</flux:navlist.item>
                 <flux:navlist.item
                     icon="bookmark"
+                    :icon:trailing="user_has_feature('saved_lists') ? null : 'lock-closed'"
                     :href="route('properties.saved')"
                     :current="request()->routeIs('properties.saved')"
                 >Saxlanılanlar</flux:navlist.item>
@@ -103,7 +97,7 @@
             <flux:navlist.group heading="Müştərilərim">
                 <flux:navlist.item
                     icon="users"
-                    :icon:trailing="$hasRequests ? null : 'lock-closed'"
+                    :icon:trailing="user_has_feature('customers') ? null : 'lock-closed'"
                     :href="route('customers.index')"
                     :current="request()->routeIs('customers.*')"
                 >Müştərilərim <em class="text-[10px] font-normal text-zinc-400 italic">(alıcılar)</em></flux:navlist.item>
@@ -115,6 +109,9 @@
             <flux:navlist.group heading="Developer">
                 <flux:navlist.item icon="document-text" :href="route('dev.logs')" :current="request()->routeIs('dev.logs')">
                     Loglar
+                </flux:navlist.item>
+                <flux:navlist.item icon="credit-card" :href="route('admin.plans')" :current="request()->routeIs('admin.plans')">
+                    Abunəliklər
                 </flux:navlist.item>
             </flux:navlist.group>
         </flux:navlist>
@@ -130,9 +127,6 @@
                 <flux:navlist.item icon="shield-check" :href="route('admin.roles')" :current="request()->routeIs('admin.roles')">
                     Rollar
                 </flux:navlist.item>
-                <flux:navlist.item icon="credit-card" :href="route('admin.plans')" :current="request()->routeIs('admin.plans')">
-                    Abunəliklər
-                </flux:navlist.item>
                 @endif
                 <flux:navlist.item icon="map-pin" :href="route('admin.locations')" :current="request()->routeIs('admin.locations')">
                     Ərazilər
@@ -141,7 +135,7 @@
         </flux:navlist>
         @endif
 
-        @if(!$isAdminOrSuper)
+        @if(!auth()->user()->hasAnyRole(['superadmin', 'admin', 'developer']))
         <flux:navlist variant="outline">
             <flux:navlist.item icon="credit-card" :href="route('pricing')" :current="request()->routeIs('pricing')">
                 Tariflər
@@ -168,7 +162,18 @@
 
         <div class="border-t border-zinc-200 px-3 py-3 dark:border-zinc-700">
             <div class="text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ auth()->user()->name }}</div>
-            <div class="text-xs text-zinc-500">{{ ucfirst(auth()->user()->subscription_plan) }} plan</div>
+            @php
+                $activePlans = auth()->user()->userPlans()
+                    ->where('is_active', true)->where('expires_at', '>', now())
+                    ->with('plan')->orderBy('expires_at')->get();
+            @endphp
+            @if($activePlans->isEmpty())
+                <div class="text-xs text-zinc-400">Aktiv tarif yoxdur</div>
+            @else
+                @foreach($activePlans as $up)
+                    <div class="text-xs text-zinc-500">{{ $up->plan->name_az }} <span class="text-zinc-400">· {{ $up->expires_at->format('d.m.Y') }}</span></div>
+                @endforeach
+            @endif
         </div>
     </flux:sidebar>
 

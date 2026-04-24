@@ -110,6 +110,12 @@ new class extends Component {
 
     public function with(): array
     {
+        $user = auth()->user();
+        $canAccess = $user->hasAnyRole(['superadmin', 'admin', 'developer']) || $user->hasFeature('saved_lists');
+        if (!$canAccess) {
+            return ['canAccess' => false, 'lists' => collect(), 'hasMoreLists' => false, 'properties' => collect()];
+        }
+
         $allLists = SavedList::where('user_id', auth()->id())
             ->withCount('items')
             ->orderByDesc('last_activity_at')
@@ -128,11 +134,14 @@ new class extends Component {
                 ->get();
         }
 
-        return compact('lists', 'hasMoreLists', 'properties');
+        return compact('lists', 'hasMoreLists', 'properties', 'canAccess');
     }
 }; ?>
 
 <div>
+@if(!$canAccess)
+    @include('livewire.partials.plan-gate', ['planKey' => 'saved_lists', 'planName' => 'Saxlanılanlar', 'pageTitle' => 'Saxlanılanlar'])
+@else
 <div class="mx-auto max-w-[1600px]">
     <div class="flex gap-4 items-start">
 
@@ -366,7 +375,7 @@ new class extends Component {
     <div class="w-72 shrink-0 rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
          style="background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 60%, #064e3b 100%);
                 position: fixed; top: 1rem; right: 1rem; bottom: 1rem;">
-        @livewire('properties.live-feed', key('live-feed-saved'))
+        <x-live-feed />
     </div>
 
     </div>{{-- end two-column --}}
@@ -384,3 +393,4 @@ new class extends Component {
     50% { opacity: 0.9; }
 }
 </style>
+@endif

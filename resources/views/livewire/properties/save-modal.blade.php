@@ -15,6 +15,10 @@ new class extends Component {
     #[On('save-property')]
     public function open(int $propertyId): void
     {
+        $user = auth()->user();
+        if (!$user->hasAnyRole(['superadmin', 'admin', 'developer']) && !$user->hasFeature('saved_lists')) {
+            return;
+        }
         $this->propertyId = $propertyId;
         $this->newListName = '';
         $this->showNewForm = false;

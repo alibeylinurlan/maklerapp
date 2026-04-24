@@ -128,7 +128,7 @@ new class extends Component {
     public function with(): array
     {
         $user = auth()->user();
-        $canAccess = $user->hasAnyRole(['superadmin', 'admin']) || $user->hasPlan('requests');
+        $canAccess = $user->hasAnyRole(['superadmin', 'admin']) || $user->hasFeature('requests');
         $canAccessRequests = $canAccess;
         $canAccessMatches  = $canAccess;
 

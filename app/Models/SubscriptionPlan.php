@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SubscriptionPlan extends Model
@@ -15,6 +16,16 @@ class SubscriptionPlan extends Model
             'price' => 'decimal:2',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function features(): BelongsToMany
+    {
+        return $this->belongsToMany(Feature::class, 'plan_features', 'plan_id', 'feature_key', 'id', 'key');
+    }
+
+    public function hasFeature(string $key): bool
+    {
+        return $this->features()->where('feature_key', $key)->exists();
     }
 
     public function userPlans(): HasMany

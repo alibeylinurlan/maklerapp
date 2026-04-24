@@ -106,6 +106,41 @@ class User extends Authenticatable
             ->exists();
     }
 
+    public function hasFeature(string $featureKey): bool
+    {
+        return in_array($featureKey, $this->activeFeatureKeys());
+    }
+
+    public function activeFeatureKeys(): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "user_features:{$this->id}",
+            $this->featureCacheTtl(),
+            fn() => $this->userPlans()
+                ->where('is_active', true)
+                ->where('expires_at', '>', now())
+                ->with('plan.features')
+                ->get()
+                ->flatMap(fn($up) => $up->plan->features->pluck('key'))
+                ->unique()
+                ->values()
+                ->toArray()
+        );
+    }
+
+    private function featureCacheTtl(): int
+    {
+        $earliest = $this->userPlans()
+            ->where('is_active', true)
+            ->where('expires_at', '>', now())
+            ->min('expires_at');
+
+        if (!$earliest) return 300;
+
+        $seconds = now()->diffInSeconds(\Carbon\Carbon::parse($earliest));
+        return max($seconds, 60);
+    }
+
     public function isPremium(): bool
     {
         return in_array($this->subscription_plan, ['premium', 'enterprise'])

@@ -140,12 +140,14 @@ new class extends Component {
                 <svg class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
                 Profil məlumatları
             </button>
+            @hasFeature('live_feed')
             <button @click="setTab('livefeed')"
                     :class="tab === 'livefeed' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'"
                     class="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors text-left">
                 <svg class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5"/></svg>
                 Canlı elanlar
             </button>
+            @endhasFeature
             <button @click="setTab('appearance')"
                     :class="tab === 'appearance' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'"
                     class="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors text-left">
@@ -177,6 +179,7 @@ new class extends Component {
                     " />
 
                 {{-- Telegram --}}
+                @hasFeature('telegram_notify')
                 <div class="rounded-xl border border-zinc-200 dark:border-zinc-700 p-4 space-y-3">
                     <div class="flex items-center gap-2">
                         <svg class="size-5 text-sky-500 shrink-0" viewBox="0 0 24 24" fill="currentColor">
@@ -210,6 +213,12 @@ new class extends Component {
                     </div>
                     @endif
                 </div>
+                @else
+                <div class="rounded-xl border border-zinc-200 dark:border-zinc-700 p-4 flex items-center gap-3 text-sm text-zinc-400">
+                    <svg class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/></svg>
+                    Telegram bildirişləri bu planda mövcud deyil. <a href="{{ route('pricing') }}" class="text-indigo-500 hover:underline">Planı yükselt</a>
+                </div>
+                @endhasFeature
 
                 <div class="flex items-center justify-between pt-1">
                     <span wire:loading wire:target="saveProfile" class="text-sm text-zinc-400">Saxlanılır...</span>
@@ -354,11 +363,13 @@ new class extends Component {
     </div>{{-- end left --}}
 
     {{-- RIGHT: live feed panel --}}
+    @if(user_has_feature('live_feed'))
     <div class="w-72 shrink-0 rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
          style="background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 60%, #064e3b 100%);
                 position: fixed; top: 1rem; right: 1rem; bottom: 1rem;">
-        @livewire('properties.live-feed', key('live-feed-settings'))
+        <x-live-feed />
     </div>
+    @endif
 
     </div>{{-- end outer flex --}}
 </div>

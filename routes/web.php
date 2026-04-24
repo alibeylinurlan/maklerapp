@@ -58,8 +58,11 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:superadmin|admin|developer')->prefix('admin')->group(function () {
         Volt::route('/users', 'admin.users.index')->name('admin.users');
         Volt::route('/roles', 'admin.roles.index')->name('admin.roles');
-        Volt::route('/plans', 'admin.plans.index')->name('admin.plans');
         Volt::route('/locations', 'admin.locations.index')->name('admin.locations');
+    });
+
+    Route::middleware('role:developer')->prefix('admin')->group(function () {
+        Volt::route('/plans', 'admin.plans.index')->name('admin.plans');
     });
 
     Route::get('/api/properties/new', function () {
@@ -92,6 +95,14 @@ Route::middleware('auth')->group(function () {
             });
         return response()->json($props);
     })->name('api.properties.new');
+
+    // phpMyAdmin auth check — nginx auth_request calls this
+    Route::get('/auth/phpmyadmin', function () {
+        if (auth()->user()?->hasRole('developer')) {
+            return response('ok', 200);
+        }
+        return response('forbidden', 403);
+    })->name('auth.phpmyadmin');
 
     Route::match(['get', 'post'], '/logout', function () {
         auth()->logout();

@@ -1,17 +1,10 @@
-<?php
-use App\Models\Property;
-use Livewire\Volt\Component;
-
-new class extends Component {
-    public int $maxId = 0;
-
-    public function mount(): void
-    {
-        $this->maxId = Property::where('is_owner', true)->max('id') ?? 0;
-    }
-};
-?>
-
+@if(!$canAccess)
+<div class="flex flex-col h-full items-center justify-center p-6 text-center opacity-60">
+    <svg class="size-8 mb-3 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/></svg>
+    <p class="text-xs text-white/50">Canlı elanlar bu planda mövcud deyil</p>
+    <a href="{{ route('pricing') }}" class="mt-3 text-xs text-indigo-300 hover:text-indigo-200 underline">Planı yükselt</a>
+</div>
+@else
 <div x-data="liveFeed({{ $maxId }})"
      x-init="init()"
      class="flex flex-col h-full">
@@ -173,7 +166,6 @@ new class extends Component {
     }
 }
 
-/* CLEAN GLOW (NO PULSE, NO JITTER) */
 .feed-glow {
     position: relative;
 }
@@ -184,10 +176,8 @@ new class extends Component {
     inset: 0;
     border-radius: 0.5rem;
     pointer-events: none;
-
     border: 1px solid rgba(16, 185, 129, 0.35);
     box-shadow: 0 0 18px rgba(16, 185, 129, 0.25);
-
     animation: glowOnce 30s ease-out forwards;
 }
 
@@ -285,16 +275,14 @@ function liveFeed(initialMaxId) {
 
             const item = { ...data, isNew, addedAt: isNew ? Date.now() : (data.addedAt || null), created_at: data.created_at ?? new Date().toISOString() };
             const updated = [item, ...this.items];
-            if (updated.length > LIVEFEED_MAX) {
-                updated.splice(LIVEFEED_MAX); // sonuncunu çıxar
-            }
+            if (updated.length > LIVEFEED_MAX) updated.splice(LIVEFEED_MAX);
             this.items = updated;
             this.save();
 
             if (isNew) {
                 setTimeout(() => {
-                    const found = this.items.find(i => i.id === item.id);
-                    if (found) { found.isNew = false; this.save(); }
+                    this.items = this.items.map(i => i.id === item.id ? { ...i, isNew: false } : i);
+                    this.save();
                 }, 30000);
             }
         },
@@ -314,10 +302,7 @@ function liveFeed(initialMaxId) {
 
             this.socket.on('connect', () => this.connected = true);
             this.socket.on('disconnect', () => this.connected = false);
-
-            this.socket.on('property.created', (data) => {
-                this.addItem(data, true);
-            });
+            this.socket.on('property.created', (data) => this.addItem(data, true));
         },
 
         formatTime(dateString) {
@@ -360,3 +345,4 @@ function liveFeed(initialMaxId) {
     };
 }
 </script>
+@endif
