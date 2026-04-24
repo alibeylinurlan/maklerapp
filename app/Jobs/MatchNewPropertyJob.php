@@ -101,10 +101,13 @@ class MatchNewPropertyJob implements ShouldQueue
             }
         }
 
-        // Lokasiya (DB id)
+        // Lokasiya (DB id) — seçilmiş location və onun child/grandchild-ları uyğun gəlir
         if (!empty($filters['locationIds'])) {
             $ids = array_map('strval', $filters['locationIds']);
-            if (!in_array((string) $property->location_id, $ids)) {
+            $level1 = \App\Models\Location::whereIn('parent_id', $ids)->pluck('id')->map('strval')->toArray();
+            $level2 = $level1 ? \App\Models\Location::whereIn('parent_id', $level1)->pluck('id')->map('strval')->toArray() : [];
+            $allIds = array_merge($ids, $level1, $level2);
+            if (!in_array((string) $property->location_id, $allIds)) {
                 return false;
             }
         }
