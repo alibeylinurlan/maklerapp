@@ -6,7 +6,6 @@ use Livewire\Volt\Component;
 
 new class extends Component {
     public bool $remember = false;
-
     public function login(string $email = '', string $password = ''): void
     {
         $v = Validator::make(
@@ -25,8 +24,31 @@ new class extends Component {
         }
 
         session()->regenerate();
+
+        $user = Auth::user();
+        $limit = config('nurlan.max_devices', 3);
+        $currentSessionId = session()->getId();
+
+        $sessions = \Illuminate\Support\Facades\DB::table('sessions')
+            ->where('user_id', $user->id)
+            ->where('id', '!=', $currentSessionId)
+            ->orderByDesc('last_activity')
+            ->get();
+
+        cache()->put("session_login_time:{$currentSessionId}", time(), now()->addDays(30));
+
+        if ($sessions->count() >= $limit) {
+            $toDelete = $sessions->skip($limit - 1)->pluck('id');
+            \Illuminate\Support\Facades\DB::table('sessions')
+                ->whereIn('id', $toDelete)
+                ->delete();
+            $this->redirect(route('properties.index', ['device_warning' => 1]));
+            return;
+        }
+
         $this->redirect(route('properties.index'));
     }
+
 }; ?>
 
 <div class="login-bg flex min-h-screen items-center justify-center px-4">
@@ -236,6 +258,21 @@ new class extends Component {
     background: #ffffff;
 }
 .eye-char { display: inline-block; }
+
+/* Device warning modal card */
+.device-warning-card {
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 1.25rem;
+    padding: 2rem;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+}
+.dark .device-warning-card {
+    background: rgba(22,22,26,0.95);
+    border-color: rgba(255,255,255,0.06);
+}
 </style>
 <script>
     function blinkEye(el) {

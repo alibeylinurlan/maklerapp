@@ -188,6 +188,29 @@
         {{ $slot }}
     @endguest
 
+    @if(request('device_warning'))
+    <div x-data="{ open: true }" x-init="const u = new URL(location); u.searchParams.delete('device_warning'); history.replaceState({}, '', u)" x-show="open"
+         class="fixed inset-0 z-50 flex items-center justify-center px-4"
+         style="background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);">
+        <div class="w-full max-w-sm rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-8 shadow-2xl">
+            <div class="mb-4 flex items-center justify-center size-12 rounded-full bg-amber-100 dark:bg-amber-900/30 mx-auto">
+                <svg class="size-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                </svg>
+            </div>
+            <h3 class="text-center font-semibold text-zinc-800 dark:text-zinc-100 mb-2">Çox sayda giriş</h3>
+            <p class="text-center text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+                Bu hesabla daxil olmalar çoxdur. Digər girişlərin bəzilərindən çıxış olundu.
+            </p>
+            <button @click="open = false"
+                    style="width:100%;background:#18181b;color:#fff;font-size:0.875rem;font-weight:600;padding:0.7rem 1rem;border-radius:0.625rem;border:none;cursor:pointer;transition:opacity 0.15s;"
+                    onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                Oldu
+            </button>
+        </div>
+    </div>
+    @endif
+
     @fluxScripts
     <script src="/socket.io.min.js"></script>
     <script>

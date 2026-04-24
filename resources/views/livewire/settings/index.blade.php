@@ -1,10 +1,68 @@
 <?php
 use Livewire\Volt\Component;
+use Illuminate\Support\Facades\DB;
 
 new class extends Component {
     public string $name = '';
     public string $phone = '';
     public string $telegramUserId = '';
+
+    public function sessions(): \Illuminate\Support\Collection
+    {
+        $currentId = session()->getId();
+        return DB::table('sessions')
+            ->where('user_id', auth()->id())
+            ->orderByDesc('last_activity')
+            ->get()
+            ->map(function ($s) use ($currentId) {
+                $ua = $s->user_agent ?? '';
+                if (str_contains($ua, 'Mobile') || str_contains($ua, 'Android') || str_contains($ua, 'iPhone')) {
+                    $device = 'Mobil';
+                    $icon = 'device-phone-mobile';
+                } elseif (str_contains($ua, 'Tablet') || str_contains($ua, 'iPad')) {
+                    $device = 'Tablet';
+                    $icon = 'device-tablet';
+                } else {
+                    $device = 'Kompüter';
+                    $icon = 'computer-desktop';
+                }
+
+                if (str_contains($ua, 'Chrome')) $browser = 'Chrome';
+                elseif (str_contains($ua, 'Firefox')) $browser = 'Firefox';
+                elseif (str_contains($ua, 'Safari')) $browser = 'Safari';
+                elseif (str_contains($ua, 'Edge')) $browser = 'Edge';
+                else $browser = 'Brauzer';
+
+                return (object) [
+                    'id'         => $s->id,
+                    'ip'         => $s->ip_address ?? '—',
+                    'device'     => $device,
+                    'icon'       => $icon,
+                    'browser'    => $browser,
+                    'logged_in_at' => ($t = cache()->get("session_login_time:{$s->id}"))
+                        ? \Carbon\Carbon::createFromTimestamp($t)->format('d.m.Y H:i')
+                        : '—',
+                    'last_active'  => \Carbon\Carbon::createFromTimestamp($s->last_activity)->format('d.m.Y H:i'),
+                    'is_current' => $s->id === $currentId,
+                ];
+            });
+    }
+
+    public function revokeSession(string $sessionId): void
+    {
+        DB::table('sessions')
+            ->where('id', $sessionId)
+            ->where('user_id', auth()->id())
+            ->delete();
+    }
+
+    public function revokeAllOtherSessions(): void
+    {
+        DB::table('sessions')
+            ->where('user_id', auth()->id())
+            ->where('id', '!=', session()->getId())
+            ->delete();
+    }
 
     public function mount(): void
     {
@@ -93,6 +151,12 @@ new class extends Component {
                     class="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors text-left">
                 <svg class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.098 19.902a3.75 3.75 0 0 0 5.304 0l6.401-6.402M6.75 21A3.75 3.75 0 0 1 3 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 0 0 3.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88M6.75 17.25h.008v.008H6.75v-.008Z"/></svg>
                 Görünüş
+            </button>
+            <button @click="setTab('sessions')"
+                    :class="tab === 'sessions' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'"
+                    class="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors text-left">
+                <svg class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0H3"/></svg>
+                Aktiv cihazlar
             </button>
         </div>
 
@@ -236,6 +300,50 @@ new class extends Component {
                         <span x-text="opt.label"></span>
                     </button>
                 </template>
+            </div>
+        </div>
+    </div>
+
+    {{-- ══════════════════════════════ AKTİV CİHAZLAR ══════════════════════════════ --}}
+    <div x-show="tab === 'sessions'">
+        <div class="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-zinc-500">Hesabınıza daxil olan aktiv cihazlar</p>
+                @if($this->sessions()->where('is_current', false)->count() > 0)
+                <flux:button wire:click="revokeAllOtherSessions" wire:confirm="Digər bütün cihazlardan çıxış olunacaq. Davam edilsin?" size="sm" variant="ghost" class="text-red-500 hover:text-red-600">
+                    Digərlərindən çıx
+                </flux:button>
+                @endif
+            </div>
+
+            <div class="space-y-2">
+                @foreach($this->sessions() as $s)
+                <div class="flex items-center justify-between rounded-xl border border-zinc-100 dark:border-zinc-800 px-4 py-3 {{ $s->is_current ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-200 dark:border-indigo-800' : '' }}">
+                    <div class="flex items-center gap-3">
+                        <div class="size-9 rounded-lg flex items-center justify-center {{ $s->is_current ? 'bg-indigo-100 dark:bg-indigo-900/40' : 'bg-zinc-100 dark:bg-zinc-800' }}">
+                            @if($s->icon === 'device-phone-mobile')
+                            <svg class="size-5 {{ $s->is_current ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 8.25h3"/></svg>
+                            @else
+                            <svg class="size-5 {{ $s->is_current ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0H3"/></svg>
+                            @endif
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium text-zinc-800 dark:text-zinc-200">{{ $s->device }} · {{ $s->browser }}</span>
+                                @if($s->is_current)
+                                <span class="text-xs bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded-md font-medium">Bu cihaz</span>
+                                @endif
+                            </div>
+                            <div class="text-xs text-zinc-400 mt-0.5">{{ $s->ip }} · Daxil olma: {{ $s->logged_in_at }} · Son aktivlik: {{ $s->last_active }}</div>
+                        </div>
+                    </div>
+                    @if(!$s->is_current)
+                    <flux:button wire:click="revokeSession('{{ $s->id }}')" wire:confirm="Bu cihazdan çıxış olunacaq. Davam edilsin?" size="sm" variant="ghost" class="text-zinc-400 hover:text-red-500 shrink-0">
+                        Çıxış
+                    </flux:button>
+                    @endif
+                </div>
+                @endforeach
             </div>
         </div>
     </div>
