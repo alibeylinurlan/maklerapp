@@ -224,7 +224,7 @@ new class extends Component {
     {{-- İSTƏKLƏR TAB --}}
     @if($activeTab === 'requests')
         @if(!$canAccessRequests)
-            @include('livewire.partials.plan-gate', ['planKey' => 'requests', 'planName' => 'İstəklər və Uyğunluqlar', 'pageTitle' => 'İstəklər'])
+            @include('livewire.partials.plan-gate', ['planKey' => 'requests', 'planName' => 'Standart tarifi və ya yuxarı', 'pageTitle' => 'İstəklər'])
         @else
         <flux:table class="mt-4">
             <flux:table.columns>
@@ -294,7 +294,7 @@ new class extends Component {
     {{-- UYĞUNLUQLAR TAB --}}
     @if($activeTab === 'matches')
         @if(!$canAccessMatches)
-            @include('livewire.partials.plan-gate', ['planKey' => 'requests', 'planName' => 'İstəklər və Uyğunluqlar', 'pageTitle' => 'Uyğunluqlar'])
+            @include('livewire.partials.plan-gate', ['planKey' => 'requests', 'planName' => 'Standart tarifi və ya yuxarı', 'pageTitle' => 'Uyğunluqlar'])
         @else
         <div class="mt-4 flex flex-wrap items-center gap-3">
             {{-- Request filter --}}

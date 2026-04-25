@@ -58,12 +58,12 @@ Route::middleware('auth')->group(function () {
 
     // Admin panel
     Route::middleware('role:superadmin|admin|developer')->prefix('admin')->group(function () {
-        Volt::route('/users', 'admin.users.index')->name('admin.users');
-        Volt::route('/roles', 'admin.roles.index')->name('admin.roles');
         Volt::route('/locations', 'admin.locations.index')->name('admin.locations');
     });
 
     Route::middleware('role:developer')->prefix('admin')->group(function () {
+        Volt::route('/users', 'admin.users.index')->name('admin.users');
+        Volt::route('/roles', 'admin.roles.index')->name('admin.roles');
         Volt::route('/plans', 'admin.plans.index')->name('admin.plans');
     });
 
@@ -73,14 +73,20 @@ Route::middleware('auth')->group(function () {
         if (!$imageUrl || (!str_starts_with($imageUrl, 'https://bina.azstatic.com/') && !str_starts_with($imageUrl, 'https://bina.az/'))) {
             abort(400);
         }
-        $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Referer' => 'https://bina.az/',
-        ])->get($imageUrl);
-        if ($response->failed()) abort(502);
-        return response($response->body())
-            ->header('Content-Type', $response->header('Content-Type') ?: 'image/jpeg')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        $context = stream_context_create(['http' => [
+            'method' => 'GET',
+            'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\r\nReferer: https://bina.az/\r\n",
+            'follow_location' => 1,
+        ]]);
+        $stream = @fopen($imageUrl, 'r', false, $context);
+        if (!$stream) abort(502);
+        return response()->stream(function () use ($stream) {
+            fpassthru($stream);
+            fclose($stream);
+        }, 200, [
+            'Content-Type' => 'image/jpeg',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     })->name('api.proxy-image');
 
     Route::get('/api/properties/new', function () {

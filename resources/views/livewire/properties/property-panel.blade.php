@@ -12,13 +12,16 @@ new class extends Component {
     public ?int $editingNoteId = null;
 
     #[On('loadPropertyPanel')]
-    public function load(int $id): void
+    public function load(int $id, ?string $url = null): void
     {
         $this->propertyId = $id;
-        $this->property = Property::with(['category', 'notes' => fn($q) => $q->where('user_id', auth()->id())->orderByDesc('created_at')])->find($id);
+        $this->property = Property::with([
+            'category',
+            'priceHistory' => fn($q) => $q->take(6),
+        ])->find($id);
         $this->noteBody = '';
         $this->editingNoteId = null;
-        $this->dispatch('property-panel-opened');
+        $this->dispatch('property-panel-opened', url: $url ?? route('properties.show', $id));
     }
 
     public function close(): void
@@ -30,28 +33,37 @@ new class extends Component {
         $this->dispatch('property-panel-closed');
     }
 
+    #[On('closePropertyPanel')]
+    public function closeFromEvent(): void
+    {
+        $this->close();
+    }
+
+    public function isSaved(): bool
+    {
+        if (!$this->propertyId) return false;
+        return \App\Models\SavedListItem::whereHas('savedList', fn($q) => $q->where('user_id', auth()->id()))
+            ->where('property_id', $this->propertyId)
+            ->exists();
+    }
+
     public function saveNote(): void
     {
+        if (!user_has_feature('notes')) return;
         $body = trim($this->noteBody);
         if (!$body) return;
-
         if ($this->editingNoteId) {
             PropertyNote::where('id', $this->editingNoteId)->where('user_id', auth()->id())->update(['body' => $body]);
             $this->editingNoteId = null;
         } else {
-            PropertyNote::create([
-                'property_id' => $this->propertyId,
-                'user_id' => auth()->id(),
-                'body' => $body,
-            ]);
+            PropertyNote::create(['property_id' => $this->propertyId, 'user_id' => auth()->id(), 'body' => $body]);
         }
-
         $this->noteBody = '';
-        $this->refreshNotes();
     }
 
     public function editNote(int $id): void
     {
+        if (!user_has_feature('notes')) return;
         $note = PropertyNote::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
         $this->editingNoteId = $id;
         $this->noteBody = $note->body;
@@ -59,31 +71,32 @@ new class extends Component {
 
     public function deleteNote(int $id): void
     {
+        if (!user_has_feature('notes')) return;
         PropertyNote::where('id', $id)->where('user_id', auth()->id())->delete();
-        $this->refreshNotes();
     }
 
-    public function cancelEdit(): void
+    public function cancelEdit(): void { $this->editingNoteId = null; $this->noteBody = ''; }
+
+    public function with(): array
     {
-        $this->editingNoteId = null;
-        $this->noteBody = '';
+        $notes = ($this->propertyId && user_has_feature('notes'))
+            ? PropertyNote::where('property_id', $this->propertyId)->where('user_id', auth()->id())->orderByDesc('created_at')->get()
+            : collect();
+        return ['notes' => $notes];
     }
-
-    private function refreshNotes(): void
-    {
-        if ($this->property) {
-            $this->property->setRelation('notes',
-                PropertyNote::where('property_id', $this->propertyId)
-                    ->where('user_id', auth()->id())
-                    ->orderByDesc('created_at')
-                    ->get()
-            );
-        }
-    }
-
 }; ?>
 
-<div class="flex flex-col h-full overflow-hidden">
+@php
+    $thumb = null;
+    if (!empty($property->photos)) {
+        $first = $property->photos[0];
+        $thumb = $first['medium'] ?? $first['large'] ?? $first['thumb'] ?? null;
+    }
+    $curr = $property ? ($property->currency === 'azn' ? '₼' : ($property->currency === 'usd' ? '$' : $property->currency)) : '';
+    $attrs = $property ? array_filter(['İpoteka' => $property->has_mortgage, 'Çıxarış' => $property->has_bill_of_sale, 'Təmirli' => $property->has_repair, 'Kirayə' => $property->is_leased]) : [];
+@endphp
+
+<div class="flex flex-col h-full bg-white dark:bg-zinc-900">
 @if($property)
 
     {{-- Header --}}
@@ -94,213 +107,225 @@ new class extends Component {
                     {{ $property->category->name_az }}
                 </span>
             @endif
-            <span class="text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate">
+            <span class="text-sm font-semibold text-zinc-700 dark:text-zinc-200 truncate">
                 {{ $property->location_full_name ?? 'Elan məlumatı' }}
             </span>
         </div>
-        <div class="flex items-center gap-1 shrink-0 ml-2">
-            <a href="{{ $property->full_url }}" target="_blank"
-               class="flex items-center justify-center size-7 rounded-lg text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
-               title="Bina.az-da aç">
-                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/>
-                </svg>
+        <div class="flex items-center gap-0.5 shrink-0 ml-2">
+            @if(!empty($property->photos))
+            <a href="{{ route('properties.image-download', $property->id) }}"
+               class="flex items-center justify-center size-7 rounded-lg text-zinc-400 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+               title="Şəkilləri yüklə">
+                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
             </a>
-            <button wire:click="close"
-                    class="flex items-center justify-center size-7 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                    title="Bağla">
-                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
+            @endif
+            <a href="{{ $property->full_url }}" target="_blank"
+               class="flex items-center justify-center size-7 rounded-lg text-zinc-400 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+               title="Bina.az-da aç">
+                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+            </a>
+            <button onclick="window.dispatchEvent(new Event('property-panel-close'))"
+                    class="flex items-center justify-center size-7 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
     </div>
 
+    {{-- Body --}}
     <div class="flex-1 overflow-y-auto">
+        <div class="p-5 space-y-6">
 
-        {{-- Photos --}}
-        @if(!empty($property->photos))
-        <div class="relative overflow-hidden"
-             x-data="{ photoIdx: 0, photos: {{ json_encode(array_map(fn($p) => $p['large'] ?? $p['medium'] ?? $p['thumb'] ?? null, $property->photos)) }} }"
-             style="height: 200px;">
-            <template x-for="(src, i) in photos" :key="i">
-                <img :src="src"
-                     x-show="photoIdx === i"
-                     x-transition:enter="transition-opacity duration-300"
-                     x-transition:enter-start="opacity-0"
-                     x-transition:enter-end="opacity-100"
-                     class="absolute inset-0 w-full h-full object-cover">
-            </template>
-            @if(count($property->photos) > 1)
-            <button @click="photoIdx = (photoIdx - 1 + photos.length) % photos.length"
-                    class="absolute left-2 top-1/2 -translate-y-1/2 size-7 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70">
-                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
-            </button>
-            <button @click="photoIdx = (photoIdx + 1) % photos.length"
-                    class="absolute right-2 top-1/2 -translate-y-1/2 size-7 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70">
-                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
-            </button>
-            <div class="absolute bottom-2 right-2 rounded-full bg-black/50 px-2 py-0.5 text-[10px] text-white"
-                 x-text="(photoIdx + 1) + ' / ' + photos.length"></div>
-            @endif
-        </div>
-        @endif
+            {{-- TOP: photo + details side by side --}}
+            <div class="flex gap-5 items-start">
 
-        <div class="px-4 pt-4 pb-3 space-y-4">
-
-            {{-- Price --}}
-            <div>
-                <div class="text-2xl font-extrabold text-zinc-900 dark:text-white">
-                    @if($property->price)
-                        {{ number_format($property->price) }}
-                        {{ $property->currency === 'azn' ? '₼' : ($property->currency === 'usd' ? '$' : $property->currency) }}
-                    @else
-                        <span class="text-zinc-400 font-normal text-base">Qiymət yox</span>
-                    @endif
-                </div>
-                @if($property->bumped_at)
-                <div class="text-xs text-zinc-400 mt-0.5">{{ $property->bumped_at->format('d.m.Y H:i') }}</div>
-                @endif
-            </div>
-
-            {{-- Specs grid --}}
-            <div class="grid grid-cols-2 gap-2">
-                @if($property->rooms)
-                <div class="flex items-center gap-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2">
-                    <svg class="size-4 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
-                    <div>
-                        <div class="text-[10px] text-zinc-400">Otaq</div>
-                        <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{{ $property->rooms }}</div>
+                {{-- Photo --}}
+                <div class="shrink-0 space-y-2">
+                    <div class="relative rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800" style="width:200px; aspect-ratio:4/3;">
+                        @if($thumb)
+                            <img src="{{ $thumb }}" class="w-full h-full object-cover">
+                        @else
+                            <div class="flex h-full w-full items-center justify-center">
+                                <svg class="size-8 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z"/></svg>
+                            </div>
+                        @endif
+                        {{-- Overlay: category + location + save/link --}}
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent flex flex-col justify-end p-2">
+                            <div class="flex items-end justify-between gap-1">
+                                <div class="min-w-0">
+                                    @if($property->category)
+                                        <div class="text-[8px] font-semibold uppercase tracking-widest text-white/60 mb-0.5">{{ $property->category->name_az }}</div>
+                                    @endif
+                                    <div class="text-xs font-semibold text-white leading-tight truncate">{{ $property->location_full_name ?? '—' }}</div>
+                                </div>
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <button
+                                        x-data="{ saved: {{ $this->isSaved() ? 'true' : 'false' }} }"
+                                        x-on:bookmark-changed.window="if ($event.detail.propertyId == {{ $property->id }}) saved = $event.detail.isSaved"
+                                        onclick="Livewire.dispatch('save-property', { propertyId: {{ $property->id }} })"
+                                        :class="saved ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-white/15 hover:bg-white/30'"
+                                        class="size-6 flex items-center justify-center rounded-full text-white transition-colors backdrop-blur-sm">
+                                        <svg class="size-3" :fill="saved ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                                    </button>
+                                    <a href="{{ $property->full_url }}" target="_blank"
+                                       class="size-6 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/30 text-white transition-colors backdrop-blur-sm">
+                                        <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        @if(!empty($property->photos) && count($property->photos) > 1)
+                            <div class="absolute top-2 right-2 rounded-full bg-black/50 px-1.5 py-0.5 text-[9px] text-white leading-none">
+                                {{ count($property->photos) }} şəkil
+                            </div>
+                        @endif
                     </div>
-                </div>
-                @endif
-
-                @if($property->area)
-                <div class="flex items-center gap-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2">
-                    <svg class="size-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>
-                    <div>
-                        <div class="text-[10px] text-zinc-400">Sahə</div>
-                        <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{{ $property->area }} m²</div>
-                    </div>
-                </div>
-                @endif
-
-                @if($property->floor)
-                <div class="flex items-center gap-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2">
-                    <svg class="size-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"/></svg>
-                    <div>
-                        <div class="text-[10px] text-zinc-400">Mərtəbə</div>
-                        <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{{ $property->floor }}{{ $property->floor_total ? '/'.$property->floor_total : '' }}</div>
-                    </div>
-                </div>
-                @endif
-
-                @if($property->location_full_name)
-                <div class="flex items-center gap-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2">
-                    <svg class="size-4 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                    <div class="min-w-0">
-                        <div class="text-[10px] text-zinc-400">Ərazi</div>
-                        <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate">{{ $property->location_full_name }}</div>
-                    </div>
-                </div>
-                @endif
-            </div>
-
-            {{-- Badges --}}
-            <div class="flex flex-wrap gap-1.5">
-                @if($property->has_mortgage)
-                    <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-1 text-xs font-medium text-blue-700 dark:text-blue-300">
-                        <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/></svg>
-                        İpoteka
-                    </span>
-                @endif
-                @if($property->has_bill_of_sale)
-                    <span class="inline-flex items-center gap-1 rounded-full bg-green-50 dark:bg-green-900/30 px-2.5 py-1 text-xs font-medium text-green-700 dark:text-green-300">
-                        <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        Çıxarış var
-                    </span>
-                @endif
-                @if($property->has_repair)
-                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-900/30 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
-                        <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z"/></svg>
-                        Təmirli
-                    </span>
-                @endif
-                @if($property->is_vipped)
-                    <span class="inline-flex items-center gap-1 rounded-full bg-violet-50 dark:bg-violet-900/30 px-2.5 py-1 text-xs font-medium text-violet-700 dark:text-violet-300">VIP</span>
-                @endif
-            </div>
-
-            {{-- Price history --}}
-            @php $history = $property->priceHistory()->take(5)->get(); @endphp
-            @if($history->count() > 0)
-            <div>
-                <div class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-2">Qiymət tarixi</div>
-                <div class="space-y-1">
-                    @foreach($history as $h)
-                    <div class="flex items-center justify-between text-xs">
-                        <span class="text-zinc-400">{{ $h->recorded_at?->format('d.m.Y') }}</span>
-                        <span class="font-medium text-zinc-700 dark:text-zinc-300">
-                            {{ number_format($h->price) }} {{ $h->currency === 'azn' ? '₼' : '$' }}
-                        </span>
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-            @endif
-
-            {{-- Notes --}}
-            <div>
-                <div class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-2">Qeydlər</div>
-
-                {{-- Note form --}}
-                <div class="space-y-2 mb-3">
-                    <textarea
-                        wire:model="noteBody"
-                        rows="2"
-                        placeholder="{{ $editingNoteId ? 'Qeydi redaktə edin...' : 'Yeni qeyd əlavə edin...' }}"
-                        class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 resize-none"
-                    ></textarea>
-                    <div class="flex gap-2">
-                        <button wire:click="saveNote"
-                                class="flex-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors">
-                            {{ $editingNoteId ? 'Yenilə' : 'Əlavə et' }}
-                        </button>
-                        @if($editingNoteId)
-                        <button wire:click="cancelEdit"
-                                class="rounded-lg bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
-                            Ləğv et
-                        </button>
+                    {{-- Links below photo --}}
+                    <div class="flex items-center gap-2.5" style="width:200px;">
+                        <a href="{{ $property->full_url }}" target="_blank"
+                           class="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-indigo-500 transition-colors">
+                            <svg class="size-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+                            bina.az-da bax
+                        </a>
+                        @if(!empty($property->photos))
+                        <a href="{{ route('properties.image-download', $property->id) }}"
+                           class="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-indigo-500 transition-colors">
+                            <svg class="size-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                            Şəkilləri yüklə
+                        </a>
                         @endif
                     </div>
                 </div>
 
-                {{-- Note list --}}
-                @forelse($property->notes as $note)
-                <div class="group relative rounded-lg border border-zinc-100 dark:border-zinc-700/50 bg-zinc-50 dark:bg-zinc-800/40 px-3 py-2 mb-2">
-                    <p class="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">{{ $note->body }}</p>
-                    <div class="flex items-center justify-between mt-1">
-                        <span class="text-[10px] text-zinc-400">{{ $note->created_at->diffForHumans() }}</span>
-                        <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button wire:click="editNote({{ $note->id }})"
-                                    class="text-[10px] text-zinc-400 hover:text-indigo-500 transition-colors px-1">
-                                Redaktə
-                            </button>
-                            <button wire:click="deleteNote({{ $note->id }})"
-                                    wire:confirm="Bu qeydi silmək istəyirsiniz?"
-                                    class="text-[10px] text-zinc-400 hover:text-red-500 transition-colors px-1">
-                                Sil
-                            </button>
+                {{-- Details --}}
+                <div class="flex-1 min-w-0 space-y-4">
+
+                    {{-- Price --}}
+                    <div>
+                        <div class="text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
+                            @if($property->price)
+                                {{ number_format($property->price) }} <span class="text-lg font-semibold text-zinc-400">{{ $curr }}</span>
+                            @else
+                                <span class="text-zinc-400 font-normal text-lg">Qiymət yox</span>
+                            @endif
+                        </div>
+                        <div class="flex items-center gap-2 mt-0.5 text-[11px] text-zinc-400">
+                            @if($property->bumped_at)<span>{{ $property->bumped_at->format('d.m.Y H:i') }}</span>@endif
+                            @if($property->bumped_at && $property->first_seen_at)<span class="text-zinc-300 dark:text-zinc-700">·</span>@endif
+                            @if($property->first_seen_at)<span>İlk: {{ $property->first_seen_at->format('d.m.Y') }}</span>@endif
                         </div>
                     </div>
+
+                    {{-- Specs --}}
+                    <div class="flex flex-wrap gap-x-5 gap-y-2.5">
+                        @if($property->rooms)
+                        <div>
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-400 mb-0.5">Otaq</div>
+                            <div class="text-sm font-bold text-zinc-800 dark:text-zinc-100">{{ $property->rooms }}</div>
+                        </div>
+                        @endif
+                        @if($property->area)
+                        <div>
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-400 mb-0.5">Sahə</div>
+                            <div class="text-sm font-bold text-zinc-800 dark:text-zinc-100">{{ $property->area }} m²</div>
+                        </div>
+                        @endif
+                        @if($property->floor)
+                        <div>
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-400 mb-0.5">Mərtəbə</div>
+                            <div class="text-sm font-bold text-zinc-800 dark:text-zinc-100">{{ $property->floor }}{{ $property->floor_total ? '/'.$property->floor_total : '' }}</div>
+                        </div>
+                        @endif
+                        @if($property->location_full_name)
+                        <div>
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-400 mb-0.5">Ərazi</div>
+                            <div class="text-sm font-bold text-zinc-800 dark:text-zinc-100">{{ $property->location_full_name }}</div>
+                        </div>
+                        @endif
+                    </div>
+
+                    {{-- Attribute tags --}}
+                    @if(count($attrs))
+                    <div class="flex flex-wrap gap-1.5">
+                        @foreach($attrs as $label => $val)
+                        <span class="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs font-medium text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">{{ $label }}</span>
+                        @endforeach
+                    </div>
+                    @endif
+
                 </div>
-                @empty
-                <div class="text-xs text-zinc-400 text-center py-3">Hələ qeyd yoxdur</div>
-                @endforelse
+            </div>
+
+            {{-- Price history --}}
+            <div>
+                <div class="text-[10px] uppercase tracking-wider text-zinc-400 mb-2">Əvvəlki qiymət tarixçəsi</div>
+                @if(user_has_feature('price_history'))
+                    @if($property->priceHistory->count() > 0)
+                    <div class="space-y-1.5">
+                        @foreach($property->priceHistory as $h)
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-zinc-400">{{ \Carbon\Carbon::parse($h->recorded_at)->format('d.m.Y') }}</span>
+                            <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ number_format($h->price) }} {{ $h->currency === 'AZN' ? '₼' : '$' }}</span>
+                        </div>
+                        @endforeach
+                    </div>
+                    @else
+                    <p class="text-sm text-zinc-400">Bu elan üçün qiymət dəyişikliyi müşahidə edilməyib.</p>
+                    @endif
+                @else
+                <div class="flex items-center gap-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2.5">
+                    <svg class="size-4 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+                    <div>
+                        <p class="text-xs font-medium text-zinc-600 dark:text-zinc-400">Ekspert tarifi tələb olunur</p>
+                        <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Qiymət tarixçəsini görmək üçün tarifinizi yükseldin</p>
+                    </div>
+                </div>
+                @endif
+            </div>
+
+            {{-- Notes --}}
+            <div class="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4">
+                <div class="text-[10px] uppercase tracking-wider text-zinc-400 mb-3">Qeydlər <span class="normal-case tracking-normal text-zinc-300 dark:text-zinc-600">— yalnız siz görə bilərsiniz</span></div>
+                @if(user_has_feature('notes'))
+                    <textarea wire:model="noteBody" rows="3"
+                        placeholder="{{ $editingNoteId ? 'Redaktə...' : 'Qeyd əlavə et...' }}"
+                        class="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 resize-none mb-2"
+                    ></textarea>
+                    <div class="flex gap-2 mb-4">
+                        <button wire:click="saveNote" class="flex-1 rounded-xl bg-indigo-600 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors">
+                            {{ $editingNoteId ? 'Yenilə' : 'Saxla' }}
+                        </button>
+                        @if($editingNoteId)
+                        <button wire:click="cancelEdit" class="rounded-xl bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 text-sm text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">Ləğv</button>
+                        @endif
+                    </div>
+                    @forelse($notes as $note)
+                    <div class="group border-t border-zinc-100 dark:border-zinc-800 pt-3 pb-1 first:border-t-0 first:pt-0">
+                        <p class="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">{{ $note->body }}</p>
+                        <div class="flex items-center justify-between mt-1">
+                            <span class="text-[10px] text-zinc-400">{{ $note->created_at->diffForHumans() }}</span>
+                            <div class="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button wire:click="editNote({{ $note->id }})" class="text-[11px] text-zinc-400 hover:text-indigo-500">Redaktə</button>
+                                <button wire:click="deleteNote({{ $note->id }})" wire:confirm="Silinsin?" class="text-[11px] text-zinc-400 hover:text-red-500">Sil</button>
+                            </div>
+                        </div>
+                    </div>
+                    @empty
+                    <p class="text-xs text-zinc-400 text-center py-2">Hələ qeyd yazmamısınız</p>
+                    @endforelse
+                @else
+                <div class="flex items-center gap-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2.5">
+                    <svg class="size-4 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+                    <div>
+                        <p class="text-xs font-medium text-zinc-600 dark:text-zinc-400">Peşəkar tarifi tələb olunur</p>
+                        <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Qeyd əlavə etmək üçün tarifinizi yükseldin</p>
+                    </div>
+                </div>
+                @endif
             </div>
 
         </div>
     </div>
+
 @else
 <div class="flex items-center justify-center h-full text-zinc-400 text-sm">
     Elan seçin

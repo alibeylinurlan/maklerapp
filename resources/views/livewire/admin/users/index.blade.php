@@ -17,7 +17,7 @@ new class extends Component {
     // Form
     public string $name = '';
     public string $email = '';
-    public string $phone = '';
+    public string $phone = '+994';
     public string $password = '';
     public array $selectedRoles = [];
 
@@ -41,7 +41,7 @@ new class extends Component {
         $this->editingId = $user->id;
         $this->name = $user->name;
         $this->email = $user->email;
-        $this->phone = $user->phone ?? '';
+        $this->phone = $user->phone ?? '+994';
         $this->password = '';
         $this->selectedRoles = $user->roles->pluck('id')->map(fn($id) => (string) $id)->toArray();
         $this->parentId = (string) ($user->parent_id ?? '');

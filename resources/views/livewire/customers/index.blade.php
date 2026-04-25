@@ -28,7 +28,7 @@ new class extends Component {
     public bool $showCustomerForm = false;
     public ?int $editingCustomerId = null;
     public string $cName = '';
-    public string $cPhone = '';
+    public string $cPhone = '+994';
     public string $cWhatsapp = '';
     public string $cNotes = '';
 
@@ -100,7 +100,7 @@ new class extends Component {
         $c = Customer::where('user_id', auth()->id())->findOrFail($id);
         $this->editingCustomerId = $c->id;
         $this->cName     = $c->name;
-        $this->cPhone    = $c->phone ?? '';
+        $this->cPhone    = $c->phone ?? '+994';
         $this->cWhatsapp = $c->whatsapp ?? '';
         $this->cNotes    = $c->notes ?? '';
         $this->showCustomerForm = true;
@@ -440,7 +440,7 @@ new class extends Component {
 
 <div>
 @if(!$canAccess)
-    @include('livewire.partials.plan-gate', ['pageTitle' => 'Müştərilər', 'planName' => 'Gold və ya yuxarı paket'])
+    @include('livewire.partials.plan-gate', ['pageTitle' => 'Müştərilər', 'planName' => 'Giriş tarifi və ya yuxarı'])
 @else
 <div class="flex flex-col" style="height: calc(100vh - 4rem); gap: 0.625rem;">
 <div class="flex gap-0 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-md flex-1 min-h-0">
@@ -581,7 +581,7 @@ new class extends Component {
 
         @if(!$canUseRequests)
         {{-- Plan gate --}}
-        @include('livewire.partials.plan-gate', ['planKey' => 'requests', 'planName' => 'İstəklər və Uyğunluqlar', 'pageTitle' => 'İstəklər'])
+        @include('livewire.partials.plan-gate', ['planKey' => 'requests', 'planName' => 'Standart tarifi və ya yuxarı', 'pageTitle' => 'İstəklər'])
 
         @else
 
@@ -687,7 +687,8 @@ new class extends Component {
                 </div>
 
                 {{-- Match list (Alpine handles selection, no server round-trips) --}}
-                <div x-data="{ selected: [], allIds: {{ $matches->pluck('id') }} }" @match-status-changed.window="selected = []">
+                <div x-data="{ selected: [], allIds: {{ $matches->pluck('id') }} }" @match-status-changed.window="selected = []"
+                     class="flex flex-col flex-1 min-h-0 overflow-hidden">
 
                 {{-- Bulk action bar --}}
                 <div x-show="selected.length > 0"

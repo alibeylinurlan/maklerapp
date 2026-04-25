@@ -58,7 +58,7 @@ new class extends Component {
         // Bookmark düyməsini anlıq yenilə
         $isSaved = !empty($this->savedInLists);
         $this->dispatch('bookmark-changed', propertyId: $this->propertyId, isSaved: $isSaved);
-        $this->show = false;
+        $this->dispatch('save-modal-close');
     }
 
     public function createList(): void
@@ -81,7 +81,7 @@ new class extends Component {
         $this->showNewForm = false;
 
         $this->dispatch('bookmark-changed', propertyId: $this->propertyId, isSaved: true);
-        $this->show = false;
+        $this->dispatch('save-modal-close');
     }
 
     public function with(): array
@@ -95,17 +95,22 @@ new class extends Component {
     }
 }; ?>
 
-<div>
-@if($show)
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4"
-     x-data x-on:keydown.escape.window="$wire.show = false">
+<div x-data="{ open: false }"
+     @save-property.window="open = true"
+     @save-modal-close.window="open = false"
+     @keydown.escape.window="open = false">
+<div class="fixed inset-0 z-[60] flex items-center justify-center p-4"
+     x-show="open"
+     x-cloak
+     style="display:none;">
 
     {{-- Backdrop --}}
     <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"
-         wire:click="$set('show', false)"></div>
+         @click="open = false"></div>
 
     {{-- Modal --}}
     <div class="relative w-full max-w-sm rounded-2xl bg-white dark:bg-zinc-900 shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden"
+         x-show="open"
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 scale-95"
          x-transition:enter-end="opacity-100 scale-100">
@@ -118,7 +123,7 @@ new class extends Component {
                 </svg>
                 <span class="font-semibold text-zinc-800 dark:text-zinc-100">Siyahıya əlavə et</span>
             </div>
-            <button wire:click="$set('show', false)" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
+            <button @click="open = false" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
                 <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
@@ -169,5 +174,4 @@ new class extends Component {
         </div>
     </div>
 </div>
-@endif
 </div>

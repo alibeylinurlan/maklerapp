@@ -140,7 +140,7 @@ new class extends Component {
 
 <div>
 @if(!$canAccess)
-    @include('livewire.partials.plan-gate', ['planKey' => 'platform', 'planName' => 'Platforma girişi', 'pageTitle' => 'Elanlar'])
+    @include('livewire.partials.plan-gate', ['planKey' => 'platform', 'planName' => 'Giriş tarifi', 'pageTitle' => 'Elanlar'])
 @else
 <div class="mx-auto max-w-[1600px]">
     {{-- Two-column layout: main + live feed --}}
@@ -151,7 +151,6 @@ new class extends Component {
 
     <div class="flex items-center justify-between">
         <flux:heading size="xl">Elanlar</flux:heading>
-        <!--<flux:badge>{{ $totalCount }} mülkiyyətçi elanı</flux:badge>-->
     </div>
 
     {{-- Filtrlər --}}
@@ -404,9 +403,10 @@ new class extends Component {
 
     </div>{{-- end two-column --}}
 </div>{{-- end max-[1600px] --}}
-@livewire('properties.save-modal', key('save-modal'))
+
+    @livewire('properties.save-modal', key('save-modal'))
+
 @endif
-</div>
 
 <style>
 @keyframes fadeSlideUp {
@@ -422,3 +422,4 @@ new class extends Component {
     animation: progressSlide 1.2s ease-in-out infinite;
 }
 </style>
+</div>

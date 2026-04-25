@@ -23,6 +23,12 @@ new class extends Component {
             return;
         }
 
+        if (!Auth::user()->is_active) {
+            Auth::logout();
+            $this->addError('email', 'Hesabınız deaktiv edilmişdir.');
+            return;
+        }
+
         session()->regenerate();
 
         $user = Auth::user();

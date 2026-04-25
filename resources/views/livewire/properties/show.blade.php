@@ -140,7 +140,7 @@ new class extends Component {
             <a href="{{ $property->full_url }}" target="_blank"
                class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-indigo-500 transition-colors">
                 <svg class="size-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
-                Daha ətraflı
+                bina.az-da bax
             </a>
             @if(!empty($property->photos))
                 <a href="{{ route('properties.image-download', $id) }}"
@@ -213,7 +213,7 @@ new class extends Component {
 
         {{-- Price history --}}
         <div>
-            <div class="text-[10px] uppercase tracking-wider text-zinc-400 mb-2">Qiymət tarixi</div>
+            <div class="text-[10px] uppercase tracking-wider text-zinc-400 mb-2">Əvvəlki qiymət tarixçəsi</div>
             @if(user_has_feature('price_history'))
                 @if($property->priceHistory->count() > 0)
                 <div class="space-y-1.5">
@@ -225,14 +225,14 @@ new class extends Component {
                     @endforeach
                 </div>
                 @else
-                <p class="text-sm text-zinc-400">Bu elan üçün qiymət dəyişikliyi yoxdur.</p>
+                <p class="text-sm text-zinc-400">Bu elan üçün qiymət dəyişikliyi müşahidə edilməyib.</p>
                 @endif
             @else
             <div class="flex items-center gap-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2.5">
                 <svg class="size-4 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
                 <div>
                     <p class="text-xs font-medium text-zinc-600 dark:text-zinc-400">Ekspert tarifi tələb olunur</p>
-                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Qiymət tarixçəsini görmək üçün tarifinizi yükseldin</p>
+                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Qiymət tarixçəsini görmək üçün tarifinizi yükseldin — <a href="{{ route('pricing') }}" class="text-indigo-500 hover:underline">tariflərə bax</a></p>
                 </div>
             </div>
             @endif
@@ -271,14 +271,14 @@ new class extends Component {
                     </div>
                 </div>
                 @empty
-                <p class="text-xs text-zinc-400 text-center py-2">Hələ qeyd yoxdur</p>
+                <p class="text-xs text-zinc-400 text-center py-2">Hələ qeyd yazmamısınız</p>
                 @endforelse
             @else
             <div class="flex items-center gap-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2.5">
                 <svg class="size-4 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
                 <div>
                     <p class="text-xs font-medium text-zinc-600 dark:text-zinc-400">Peşəkar tarifi tələb olunur</p>
-                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Qeyd əlavə etmək üçün tarifinizi yükseldin</p>
+                    <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Qeyd əlavə etmək üçün tarifinizi yükseldin — <a href="{{ route('pricing') }}" class="text-indigo-500 hover:underline">tariflərə bax</a></p>
                 </div>
             </div>
             @endif

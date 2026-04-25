@@ -11,11 +11,14 @@ new class extends Component {
     {
         $userId = auth()->id();
 
+        $isDeveloper = auth()->user()->hasRole('developer');
+
         return [
             'customerCount' => Customer::where('user_id', $userId)->count(),
             'requestCount' => CustomerRequest::where('user_id', $userId)->where('is_active', true)->count(),
             'matchCount' => PropertyMatch::where('user_id', $userId)->where('status', 'new')->count(),
-            'propertyCount' => Property::count(),
+            'propertyCount' => $isDeveloper ? Property::count() : null,
+            'isDeveloper' => $isDeveloper,
             'customerRequests' => CustomerRequest::with([
                     'matches' => fn($q) => $q->where('status', 'new')->latest(),
                     'customer'
@@ -38,7 +41,7 @@ new class extends Component {
     <flux:heading size="xl">Dashboard</flux:heading>
     <flux:subheading>Xoş gəldiniz, {{ auth()->user()->name }}</flux:subheading>
 
-    <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 {{ $isDeveloper ? 'lg:grid-cols-4' : 'lg:grid-cols-3' }}">
         <flux:card class="!p-4">
             <div class="text-sm text-zinc-500">Müştərilərim <em class="text-[10px] font-normal text-zinc-400 italic">(alıcılar)</em></div>
             <div class="mt-1 text-2xl font-bold">{{ $customerCount }}</div>
@@ -51,10 +54,12 @@ new class extends Component {
             <div class="text-sm text-zinc-500">Yeni uyğunluqlar</div>
             <div class="mt-1 text-2xl font-bold text-green-600">{{ $matchCount }}</div>
         </flux:card>
+        @if($isDeveloper)
         <flux:card class="!p-4">
             <div class="text-sm text-zinc-500">Elan bazası</div>
             <div class="mt-1 text-2xl font-bold">{{ number_format($propertyCount) }}</div>
         </flux:card>
+        @endif
     </div>
 
     @if($customerRequests->isNotEmpty())

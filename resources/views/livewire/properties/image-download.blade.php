@@ -218,7 +218,7 @@ new class extends Component {
         </div>
 
         {{-- Grid --}}
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
             @foreach($photos as $i => $photo)
                 <div
                     @click="toggle({{ $i }})"

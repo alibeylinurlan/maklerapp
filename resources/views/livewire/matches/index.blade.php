@@ -56,7 +56,7 @@ new class extends Component {
 
 <div>
 @if(!$canAccess)
-    @include('livewire.partials.plan-gate', ['planKey' => 'matches', 'planName' => 'Uyğunluqlar', 'pageTitle' => 'Uyğunluqlar'])
+    @include('livewire.partials.plan-gate', ['planKey' => 'matches', 'planName' => 'Peşəkar tarifi və ya yuxarı', 'pageTitle' => 'Uyğunluqlar'])
 @else
     <flux:heading size="xl">Uyğunluqlar</flux:heading>
 
