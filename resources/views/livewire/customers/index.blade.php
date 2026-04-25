@@ -54,8 +54,6 @@ new class extends Component {
     public string $rSearchScope = 'new_only'; // 'new_only' | 'all'
     public bool $rIsActive = true;
 
-    // Match bulk selection
-    public array $selectedMatchIds = [];
 
     // Telegram notify modal
     public bool $showNotifyModal = false;
@@ -69,7 +67,10 @@ new class extends Component {
     {
         $this->customerLimit += 30;
     }
-    public function updatedMatchStatus(): void { $this->selectedMatchIds = []; }
+    public function updatedMatchStatus(): void
+    {
+        $this->dispatch('match-status-changed');
+    }
 
 
     // ── Customer actions ──────────────────────────────────────────
@@ -85,7 +86,6 @@ new class extends Component {
     {
         $this->selectedRequestId = $this->selectedRequestId === $id ? null : $id;
         $this->matchStatus = 'new';
-        $this->selectedMatchIds = [];
         $this->resetPage();
     }
 
@@ -306,41 +306,37 @@ new class extends Component {
         $this->touchCurrentCustomer();
     }
 
-    public function bulkMarkViewed(): void
+    public function bulkMarkViewed(array $ids): void
     {
-        if (empty($this->selectedMatchIds)) return;
-        PropertyMatch::where('user_id', auth()->id())->whereIn('id', $this->selectedMatchIds)->update(['status' => 'viewed']);
-        $this->selectedMatchIds = [];
+        if (empty($ids)) return;
+        PropertyMatch::where('user_id', auth()->id())->whereIn('id', $ids)->update(['status' => 'viewed']);
         $this->touchCurrentCustomer();
     }
 
-    public function bulkMarkInProgress(): void
+    public function bulkMarkInProgress(array $ids): void
     {
-        if (empty($this->selectedMatchIds)) return;
-        PropertyMatch::where('user_id', auth()->id())->whereIn('id', $this->selectedMatchIds)->update(['status' => 'in_progress']);
-        $this->selectedMatchIds = [];
+        if (empty($ids)) return;
+        PropertyMatch::where('user_id', auth()->id())->whereIn('id', $ids)->update(['status' => 'in_progress']);
         $this->touchCurrentCustomer();
     }
 
-    public function bulkDismiss(): void
+    public function bulkDismiss(array $ids): void
     {
-        if (empty($this->selectedMatchIds)) return;
-        PropertyMatch::where('user_id', auth()->id())->whereIn('id', $this->selectedMatchIds)->update([
+        if (empty($ids)) return;
+        PropertyMatch::where('user_id', auth()->id())->whereIn('id', $ids)->update([
             'status'       => 'dismissed',
             'dismissed_at' => now(),
         ]);
-        $this->selectedMatchIds = [];
         $this->touchCurrentCustomer();
     }
 
-    public function bulkRecover(): void
+    public function bulkRecover(array $ids): void
     {
-        if (empty($this->selectedMatchIds)) return;
-        PropertyMatch::where('user_id', auth()->id())->whereIn('id', $this->selectedMatchIds)->update([
+        if (empty($ids)) return;
+        PropertyMatch::where('user_id', auth()->id())->whereIn('id', $ids)->update([
             'status'       => 'in_progress',
             'dismissed_at' => null,
         ]);
-        $this->selectedMatchIds = [];
         $this->touchCurrentCustomer();
     }
 
@@ -690,25 +686,30 @@ new class extends Component {
                     <p class="text-xs text-zinc-400">{{ $tabDescriptions[$matchStatus] }}</p>
                 </div>
 
+                {{-- Match list (Alpine handles selection, no server round-trips) --}}
+                <div x-data="{ selected: [], allIds: {{ $matches->pluck('id') }} }" @match-status-changed.window="selected = []">
+
                 {{-- Bulk action bar --}}
-                @if(count($selectedMatchIds) > 0)
-                <div class="flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/40 border-b border-indigo-200 dark:border-indigo-800">
-                    <span class="text-sm font-medium text-indigo-700 dark:text-indigo-300">{{ count($selectedMatchIds) }} seçilib</span>
+                <div x-show="selected.length > 0"
+                     class="flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/40 border-b border-indigo-200 dark:border-indigo-800">
+                    <span class="text-sm font-medium text-indigo-700 dark:text-indigo-300" x-text="selected.length + ' seçilib'"></span>
+                    <button @click="selected.length === allIds.length ? selected = [] : selected = [...allIds]"
+                            class="text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors"
+                            x-text="selected.length === allIds.length ? 'Ləğv et' : 'Hamısını seç'"></button>
                     <div class="flex gap-1 ml-auto">
                         @if($matchStatus !== 'viewed')
-                        <flux:button wire:click="bulkMarkViewed" size="xs" variant="ghost" icon="eye">Baxıldı</flux:button>
+                        <flux:button @click="$wire.bulkMarkViewed(selected); selected = []" size="xs" variant="ghost" icon="eye">Baxıldı</flux:button>
                         @endif
                         @if($matchStatus !== 'in_progress')
-                        <flux:button wire:click="bulkMarkInProgress" size="xs" variant="ghost" icon="clock">Nəzarətdə</flux:button>
+                        <flux:button @click="$wire.bulkMarkInProgress(selected); selected = []" size="xs" variant="ghost" icon="clock">Nəzarətdə</flux:button>
                         @endif
                         @if($matchStatus === 'dismissed')
-                        <flux:button wire:click="bulkRecover" size="xs" variant="ghost" icon="arrow-uturn-left" class="text-green-600">Bərpa et</flux:button>
+                        <flux:button @click="$wire.bulkRecover(selected); selected = []" size="xs" variant="ghost" icon="arrow-uturn-left" class="text-green-600">Bərpa et</flux:button>
                         @else
-                        <flux:button wire:click="bulkDismiss" size="xs" variant="ghost" icon="x-mark" class="text-red-500">Sil</flux:button>
+                        <flux:button @click="$wire.bulkDismiss(selected); selected = []" size="xs" variant="ghost" icon="x-mark" class="text-red-500">Sil</flux:button>
                         @endif
                     </div>
                 </div>
-                @endif
 
                 {{-- Match list --}}
                 <div class="flex-1 overflow-y-auto p-4">
@@ -720,12 +721,12 @@ new class extends Component {
                     @else
                     <div class="space-y-3">
                         @foreach($matches as $match)
-                        <div class="flex gap-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3
-                            {{ in_array($match->id, $selectedMatchIds) ? 'ring-2 ring-indigo-400' : '' }}">
+                        <div class="flex gap-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3"
+                             :class="selected.includes({{ $match->id }}) ? 'ring-2 ring-indigo-400' : ''">
 
                             {{-- Checkbox --}}
                             <div class="flex items-start pt-1">
-                                <input type="checkbox" wire:model.live="selectedMatchIds" value="{{ $match->id }}"
+                                <input type="checkbox" :value="{{ $match->id }}" x-model="selected"
                                        class="size-4 rounded border-zinc-300 dark:border-zinc-600 text-indigo-600 cursor-pointer">
                             </div>
 
@@ -757,6 +758,11 @@ new class extends Component {
                                         </div>
                                     </div>
                                     <div class="flex gap-1 shrink-0">
+                                        @if($match->property)
+                                            <a href="{{ route('properties.show', $match->property->id) }}">
+                                                <flux:button size="xs" variant="ghost" icon="information-circle" title="Ətraflı" />
+                                            </a>
+                                        @endif
                                         <a href="{{ $match->property?->full_url }}" target="_blank">
                                             <flux:button size="xs" variant="ghost" icon="arrow-top-right-on-square" />
                                         </a>
@@ -781,6 +787,7 @@ new class extends Component {
                     <div class="mt-4">{{ $matches->links() }}</div>
                     @endif
                 </div>
+                </div>{{-- end x-data selection --}}
             </div>
             @elseif($selectedRequestId && !$selectedRequest)
                 {{-- selectedRequestId var amma request tapılmadı (silinib) --}}

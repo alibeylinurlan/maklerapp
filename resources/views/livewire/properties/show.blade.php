@@ -135,12 +135,23 @@ new class extends Component {
             </div>
         </div>
 
-        {{-- Bina.az link --}}
-        <a href="{{ $property->full_url }}" target="_blank"
-           class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-indigo-500 transition-colors" style="width:280px; max-width:100%;">
-            <svg class="size-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
-            Daha ətraflı
-        </a>
+        {{-- Links --}}
+        <div class="flex items-center gap-3" style="width:280px; max-width:100%;">
+            <a href="{{ $property->full_url }}" target="_blank"
+               class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-indigo-500 transition-colors">
+                <svg class="size-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+                Daha ətraflı
+            </a>
+            @if(!empty($property->photos))
+                <a href="{{ route('properties.image-download', $id) }}"
+                   class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-indigo-500 transition-colors">
+                    <svg class="size-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                    </svg>
+                    Şəkilləri yüklə
+                </a>
+            @endif
+        </div>
     </div>
 
     {{-- CENTER: details --}}

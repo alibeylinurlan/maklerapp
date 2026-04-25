@@ -22,6 +22,7 @@ Route::middleware('auth')->group(function () {
     Volt::route('/properties', 'properties.index')->name('properties.index');
     Volt::route('/properties/saved', 'properties.saved-lists')->name('properties.saved');
     Volt::route('/properties/{id}', 'properties.show')->name('properties.show');
+    Volt::route('/properties/{id}/images', 'properties.image-download')->name('properties.image-download');
     Volt::route('/customers', 'customers.index')->name('customers.index');
     Route::get('/customer-requests', fn() => redirect()->route('customers.index'))->name('customer-requests.index');
     Route::get('/matches', fn() => redirect()->route('customers.index'))->name('matches.index');
@@ -65,6 +66,22 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:developer')->prefix('admin')->group(function () {
         Volt::route('/plans', 'admin.plans.index')->name('admin.plans');
     });
+
+    Route::get('/api/proxy-image', function () {
+        $imageUrl = request('url');
+        $filename = request('filename', 'image.jpg');
+        if (!$imageUrl || (!str_starts_with($imageUrl, 'https://bina.azstatic.com/') && !str_starts_with($imageUrl, 'https://bina.az/'))) {
+            abort(400);
+        }
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer' => 'https://bina.az/',
+        ])->get($imageUrl);
+        if ($response->failed()) abort(502);
+        return response($response->body())
+            ->header('Content-Type', $response->header('Content-Type') ?: 'image/jpeg')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    })->name('api.proxy-image');
 
     Route::get('/api/properties/new', function () {
         $since = (int) request('since', 0);
