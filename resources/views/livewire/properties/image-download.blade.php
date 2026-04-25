@@ -95,6 +95,9 @@ new class extends Component {
     }
 }; ?>
 
+<div class="flex gap-4 items-start">
+<div style="margin-right: 19rem;" class="flex-1 min-w-0">
+
 <div
     x-data="{
         selected: [],
@@ -240,4 +243,12 @@ new class extends Component {
             @endforeach
         </div>
     @endif
+</div>{{-- end main --}}
+</div>{{-- end flex wrapper --}}
+
+{{-- LIVE FEED: fixed right --}}
+<div class="w-72 shrink-0 rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
+     style="background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 60%, #064e3b 100%);
+            position: fixed; top: 1rem; right: 1rem; bottom: 1rem;">
+    <x-live-feed />
 </div>

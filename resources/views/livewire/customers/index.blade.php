@@ -762,6 +762,9 @@ new class extends Component {
                                             <a href="{{ route('properties.show', $match->property->id) }}">
                                                 <flux:button size="xs" variant="ghost" icon="information-circle" title="Ətraflı" />
                                             </a>
+                                            <a href="{{ route('properties.image-download', $match->property->id) }}">
+                                                <flux:button size="xs" variant="ghost" icon="arrow-down-tray" title="Şəkilləri yüklə" />
+                                            </a>
                                         @endif
                                         <a href="{{ $match->property?->full_url }}" target="_blank">
                                             <flux:button size="xs" variant="ghost" icon="arrow-top-right-on-square" />
