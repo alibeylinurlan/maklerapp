@@ -77,6 +77,11 @@ class Property extends Model
         return $this->hasMany(PriceHistory::class)->orderByDesc('recorded_at');
     }
 
+    public function notes(): HasMany
+    {
+        return $this->hasMany(PropertyNote::class)->orderByDesc('created_at');
+    }
+
     public function getFullUrlAttribute(): string
     {
         return 'https://bina.az' . $this->path;

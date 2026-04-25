@@ -19,6 +19,49 @@ new class extends Component {
     public ?int $editingFeaturesForPlanId = null;
     public array $selectedFeatureKeys = [];
 
+    // Feature name editing
+    public ?int $editingFeatureNameId = null;
+    public string $editingFeatureName = '';
+
+    public function startEditFeatureName(int $featureId): void
+    {
+        $f = Feature::findOrFail($featureId);
+        $this->editingFeatureNameId = $featureId;
+        $this->editingFeatureName = $f->name_az;
+    }
+
+    public function saveFeatureName(): void
+    {
+        $name = trim($this->editingFeatureName);
+        if (!$name) return;
+        Feature::where('id', $this->editingFeatureNameId)->update(['name_az' => $name]);
+        $this->editingFeatureNameId = null;
+        $this->editingFeatureName = '';
+    }
+
+    public function cancelEditFeatureName(): void
+    {
+        $this->editingFeatureNameId = null;
+        $this->editingFeatureName = '';
+    }
+
+    // Feature reordering
+    public function moveFeature(int $featureId, string $direction): void
+    {
+        $features = Feature::orderBy('sort_order')->get();
+        $index = $features->search(fn($f) => $f->id === $featureId);
+        if ($index === false) return;
+
+        $swapIndex = $direction === 'up' ? $index - 1 : $index + 1;
+        if ($swapIndex < 0 || $swapIndex >= $features->count()) return;
+
+        $a = $features[$index];
+        $b = $features[$swapIndex];
+        [$aOrder, $bOrder] = [$a->sort_order, $b->sort_order];
+        $a->update(['sort_order' => $bOrder]);
+        $b->update(['sort_order' => $aOrder]);
+    }
+
     public function editFeatures(int $planId): void
     {
         $this->editingFeaturesForPlanId = $planId;
@@ -217,6 +260,53 @@ new class extends Component {
         </div>
     </div>
     @endif
+
+    {{-- Feature ordering --}}
+    <div class="mt-8 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-5 shadow-sm max-w-sm">
+        <div class="text-sm font-semibold text-zinc-700 dark:text-zinc-200 mb-3">Funksiyaların sırası</div>
+        <div class="space-y-1">
+            @foreach($features as $i => $f)
+            <div class="rounded-lg px-2 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
+                @if($editingFeatureNameId === $f->id)
+                <div class="flex items-center gap-1.5">
+                    <input wire:model="editingFeatureName"
+                           wire:keydown.enter="saveFeatureName"
+                           wire:keydown.escape="cancelEditFeatureName"
+                           class="flex-1 rounded-lg border border-indigo-400 bg-white dark:bg-zinc-700 px-2 py-1 text-sm text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                           autofocus />
+                    <button wire:click="saveFeatureName" class="size-6 flex items-center justify-center rounded text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition">
+                        <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                    </button>
+                    <button wire:click="cancelEditFeatureName" class="size-6 flex items-center justify-center rounded text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition">
+                        <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                @else
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-zinc-400 w-5 text-right shrink-0">{{ $i + 1 }}</span>
+                    <span class="flex-1 text-sm text-zinc-700 dark:text-zinc-300">{{ $f->name_az }}</span>
+                    <div class="flex gap-1 shrink-0">
+                        <button wire:click="startEditFeatureName({{ $f->id }})"
+                            class="size-6 flex items-center justify-center rounded text-zinc-300 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition">
+                            <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+                        </button>
+                        <button wire:click="moveFeature({{ $f->id }}, 'up')"
+                            @if($i === 0) disabled @endif
+                            class="size-6 flex items-center justify-center rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 transition">
+                            <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/></svg>
+                        </button>
+                        <button wire:click="moveFeature({{ $f->id }}, 'down')"
+                            @if($i === $features->count() - 1) disabled @endif
+                            class="size-6 flex items-center justify-center rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 transition">
+                            <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                        </button>
+                    </div>
+                </div>
+                @endif
+            </div>
+            @endforeach
+        </div>
+    </div>
 
     {{-- Users & subscriptions --}}
     <div class="mt-8 flex items-center justify-between">

@@ -310,6 +310,15 @@ new class extends Component {
                                 </div>
                                 @endif
 
+                                {{-- Info button --}}
+                                <button
+                                    onclick="event.preventDefault(); event.stopPropagation(); window.location='{{ route('properties.show', $p->id) }}'"
+                                    class="absolute bottom-2 right-10 flex items-center justify-center size-7 rounded-full bg-black/50 hover:bg-white/20 text-white backdrop-blur-sm transition-all"
+                                    title="Ətraflı bax">
+                                    <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+                                    </svg>
+                                </button>
                                 {{-- Remove button --}}
                                 <button wire:click="removeProperty({{ $item->id }})"
                                         wire:confirm="Bu elanı siyahıdan çıxarmaq istədiyinizə əminsiniz?"
