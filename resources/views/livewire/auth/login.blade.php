@@ -25,7 +25,7 @@ new class extends Component {
 
         if (!Auth::user()->is_active) {
             Auth::logout();
-            $this->addError('email', 'Hesabınız deaktiv edilmişdir.');
+            $this->addError('email', 'Hesabınız aktiv deyil.');
             return;
         }
 

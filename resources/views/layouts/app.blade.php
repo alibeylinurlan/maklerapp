@@ -78,7 +78,7 @@
         <flux:navlist variant="outline">
             <flux:navlist.group heading="Əsas">
                 <flux:navlist.item icon="chart-bar-square" :href="route('dashboard')" :current="request()->routeIs('dashboard')">
-                    Dashboard
+                    Giriş səhifəsi
                 </flux:navlist.item>
                 <flux:navlist.item
                     icon="building-office"
@@ -101,6 +101,12 @@
                     :href="route('customers.index')"
                     :current="request()->routeIs('customers.*')"
                 >Müştərilərim <em class="text-[10px] font-normal text-zinc-400 italic">(alıcılar)</em></flux:navlist.item>
+                <flux:navlist.item
+                    icon="home"
+                    :icon:trailing="user_has_feature('customers') ? null : 'lock-closed'"
+                    :href="route('sellers.index')"
+                    :current="request()->routeIs('sellers.*')"
+                >Müştərilərim <em class="text-[10px] font-normal text-zinc-400 italic">(satıcılar)</em></flux:navlist.item>
             </flux:navlist.group>
         </flux:navlist>
 

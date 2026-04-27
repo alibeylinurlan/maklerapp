@@ -31,6 +31,9 @@
                 <flux:navlist.item icon="users" :href="route('customers.index')" :current="request()->routeIs('customers.*')">
                     Müştərilərim <em class="text-[10px] font-normal not-italic text-zinc-400 italic">alıcılar</em>
                 </flux:navlist.item>
+                <flux:navlist.item icon="home" :href="route('sellers.index')" :current="request()->routeIs('sellers.*')">
+                    Müştərilərim <em class="text-[10px] font-normal not-italic text-zinc-400 italic">satıcılar</em>
+                </flux:navlist.item>
                 <flux:navlist.item icon="clipboard-document-list" :href="route('customer-requests.index')" :current="request()->routeIs('customer-requests.*')">
                     İstəklər
                 </flux:navlist.item>

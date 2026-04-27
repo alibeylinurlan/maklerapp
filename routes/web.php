@@ -24,6 +24,7 @@ Route::middleware('auth')->group(function () {
     Volt::route('/properties/{id}', 'properties.show')->name('properties.show');
     Volt::route('/properties/{id}/images', 'properties.image-download')->name('properties.image-download');
     Volt::route('/customers', 'customers.index')->name('customers.index');
+    Volt::route('/sellers', 'sellers.index')->name('sellers.index');
     Route::get('/customer-requests', fn() => redirect()->route('customers.index'))->name('customer-requests.index');
     Route::get('/matches', fn() => redirect()->route('customers.index'))->name('matches.index');
     Volt::route('/settings', 'settings.index')->name('settings');

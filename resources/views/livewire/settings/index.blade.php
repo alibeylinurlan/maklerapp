@@ -108,7 +108,7 @@ new class extends Component {
         if ($newTelegramId && $newTelegramId !== $oldTelegramId) {
             $telegram = new \App\Services\TelegramService();
             $telegram->send($newTelegramId,
-                "👋 <b>Xoş gəldiniz, {$user->name}!</b>\n\nBinokl.az bildirişləri uğurla qoşuldu. Yeni uyğunluq tapıldıqda sizə xəbər verəcəyik."
+                "👋 <b>Xoş gəldiniz, {$user->name}!</b>\n\nBinokl.az bildirişləri uğurla qoşuldu. Yeni uyğunluqları və ya digər bildirişləri burdan alacaqsınız."
             );
         }
 

@@ -60,6 +60,18 @@ new class extends Component {
     public ?int $notifyRequestId = null;
     public string $notifyRequestName = '';
     public bool $notifyCurrentState = false;
+    public bool $showNotifyLimitModal = false;
+    public int $notifyLimit = 0;
+    public int $notifyActiveCount = 0;
+
+    private function telegramNotifyLimit(): int
+    {
+        $user = auth()->user();
+        if ($user->hasAnyRole(['superadmin', 'admin', 'developer'])) return PHP_INT_MAX;
+        if ($user->hasPlan('ultra'))   return 10;
+        if ($user->hasPlan('premium')) return 1;
+        return 0;
+    }
 
     public function updatedSearch(): void { $this->resetPage(); $this->customerLimit = 30; $this->selectedCustomerId = null; }
 
@@ -253,11 +265,30 @@ new class extends Component {
 
     public function openNotifyModal(int $id): void
     {
+        if (!auth()->user()->telegram_user_id) {
+            $this->dispatch('no-telegram-id');
+            return;
+        }
         $req = CustomerRequest::where('user_id', auth()->id())->findOrFail($id);
-        $this->notifyRequestId   = $req->id;
-        $this->notifyRequestName = $req->name;
+
+        // Aktivləşdirməyə çalışırsa limit yoxla
+        if (!$req->notify_telegram) {
+            $limit = $this->telegramNotifyLimit();
+            $activeCount = CustomerRequest::where('user_id', auth()->id())
+                ->where('notify_telegram', true)->count();
+
+            if ($activeCount >= $limit) {
+                $this->notifyLimit = $limit;
+                $this->notifyActiveCount = $activeCount;
+                $this->showNotifyLimitModal = true;
+                return;
+            }
+        }
+
+        $this->notifyRequestId    = $req->id;
+        $this->notifyRequestName  = $req->name;
         $this->notifyCurrentState = $req->notify_telegram;
-        $this->showNotifyModal   = true;
+        $this->showNotifyModal    = true;
     }
 
     public function confirmToggleTelegramNotify(): void
@@ -1014,6 +1045,42 @@ new class extends Component {
             </flux:button>
         </div>
     </form>
+</flux:modal>
+
+<div x-data="{ open: false }"
+     x-on:no-telegram-id.window="open = true">
+    <flux:modal x-model="open" class="max-w-sm">
+        <flux:heading size="lg" class="flex items-center gap-2">
+            <svg class="size-5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+            </svg>
+            Telegram qoşulmayıb
+        </flux:heading>
+        <flux:subheading class="mt-2">
+            Telegram bildirişi almaq üçün Telegram ID əlavə edib botu başlatmalısınız.
+            <a href="{{ route('settings') }}?tab=profile" class="text-indigo-500 hover:underline font-medium">Tənzimləmələrdən düzəldin →</a>
+        </flux:subheading>
+        <div class="flex justify-end mt-6">
+            <flux:button @click="open = false" variant="primary">Bağla</flux:button>
+        </div>
+    </flux:modal>
+</div>
+
+<flux:modal wire:model="showNotifyLimitModal" class="max-w-sm">
+    <flux:heading size="lg" class="flex items-center gap-2">
+        <svg class="size-5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+        </svg>
+        Telegram bildiriş limiti
+    </flux:heading>
+    <flux:subheading class="mt-2">
+        Tarifinizə görə maksimum <strong>{{ $notifyLimit }}</strong> aktiv Telegram bildirişiniz ola bilər.
+        Hazırda <strong>{{ $notifyActiveCount }}</strong> aktiv bildirişiniz var.
+        Yeni bildiriş əlavə etmək üçün mövcud birini söndürün və ya <a href="{{ route('pricing') }}" class="text-indigo-500 hover:underline font-medium">tarifinizi yükseldin →</a>
+    </flux:subheading>
+    <div class="flex justify-end mt-6">
+        <flux:button wire:click="$set('showNotifyLimitModal', false)" variant="primary">Bağla</flux:button>
+    </div>
 </flux:modal>
 
 <flux:modal wire:model="showNotifyModal" class="max-w-sm">

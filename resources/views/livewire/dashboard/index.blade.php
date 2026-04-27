@@ -21,7 +21,7 @@ new class extends Component {
             'isDeveloper' => $isDeveloper,
             'customerRequests' => CustomerRequest::with([
                     'matches' => fn($q) => $q->where('status', 'new')->latest(),
-                    'customer'
+                    'customer:id,name',
                 ])
                 ->withCount([
                     'matches as new_matches_count' => fn($q) => $q->where('status', 'new')
@@ -33,12 +33,19 @@ new class extends Component {
                 ->sortByDesc(fn($r) => $r->matches->max('created_at'))
                 ->take(10)
                 ->values(),
+            'telegramRequests' => CustomerRequest::select('id', 'name', 'customer_id', 'user_id')
+                ->with('customer:id,name')
+                ->where('user_id', $userId)
+                ->where('is_active', true)
+                ->where('notify_telegram', true)
+                ->orderBy('name')
+                ->get(),
         ];
     }
 }; ?>
 
 <div>
-    <flux:heading size="xl">Dashboard</flux:heading>
+    <flux:heading size="xl">Giriş səhifəsi</flux:heading>
     <flux:subheading>Xoş gəldiniz, {{ auth()->user()->name }}</flux:subheading>
 
     <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 {{ $isDeveloper ? 'lg:grid-cols-4' : 'lg:grid-cols-3' }}">
@@ -93,6 +100,29 @@ new class extends Component {
     @else
     <div class="mt-8 rounded-lg border border-dashed border-zinc-300 p-8 text-center text-zinc-500">
         Hələ uyğunluq tapılmayıb. Müştəri istəkləri əlavə edin.
+    </div>
+    @endif
+
+    @if($telegramRequests->isNotEmpty())
+    <div class="mt-8">
+        <div class="flex items-center gap-2 mb-3">
+            <svg class="size-4 text-sky-500 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+            </svg>
+            <flux:heading size="lg">Aktiv Telegram bildirişləri</flux:heading>
+            <flux:badge size="sm" color="sky">{{ $telegramRequests->count() }}</flux:badge>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            @foreach($telegramRequests as $req)
+            <a href="{{ route('customers.index', ['selectedCustomerId' => $req->customer_id, 'selectedRequestId' => $req->id]) }}"
+               class="flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm text-sky-700 hover:bg-sky-100 transition dark:border-sky-800 dark:bg-sky-900/20 dark:text-sky-300 dark:hover:bg-sky-900/40">
+                <span class="size-1.5 rounded-full bg-sky-400 shrink-0"></span>
+                <span class="font-medium">{{ $req->customer?->name }}</span>
+                <span class="text-sky-400">·</span>
+                <span>{{ $req->name }}</span>
+            </a>
+            @endforeach
+        </div>
     </div>
     @endif
 </div>

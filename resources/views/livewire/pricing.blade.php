@@ -90,8 +90,18 @@ new class extends Component {
                     @foreach($features as $feature)
                     <li class="flex items-start gap-2">
                         @if(in_array($feature->key, $plan->feature_keys))
+                            @php
+                                $featureLabel = $feature->name_az;
+                                if ($feature->key === 'telegram_notify') {
+                                    $featureLabel = match($plan->key) {
+                                        'ultra'   => 'Telegram bildirişi (10 ədəd)',
+                                        'premium' => 'Telegram bildirişi (1 ədəd)',
+                                        default   => $featureLabel,
+                                    };
+                                }
+                            @endphp
                             <svg class="mt-0.5 size-4 shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                            <span class="text-sm text-zinc-700 dark:text-zinc-300">{{ $feature->name_az }}</span>
+                            <span class="text-sm text-zinc-700 dark:text-zinc-300">{{ $featureLabel }}</span>
                         @else
                             <svg class="mt-0.5 size-4 shrink-0 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                             <span class="text-sm text-zinc-400 dark:text-zinc-600">{{ $feature->name_az }}</span>

@@ -24,14 +24,16 @@ new class extends Component {
     public string $parentId = '';
 
     // Plan assignment
-    public array $newPlanIds = [];
+    public string $newPlanId = '';
     public string $newPlanExpires = '';
 
     public function updatedSearch(): void { $this->resetPage(); }
 
     public function create(): void
     {
-        $this->reset(['editingId', 'name', 'email', 'phone', 'password', 'selectedRoles', 'parentId']);
+        $this->reset(['editingId', 'name', 'email', 'phone', 'password', 'parentId']);
+        $default = Role::where('name', 'əmlakçı')->first();
+        $this->selectedRoles = $default ? [(string) $default->id] : [];
         $this->showForm = true;
     }
 
@@ -45,7 +47,7 @@ new class extends Component {
         $this->password = '';
         $this->selectedRoles = $user->roles->pluck('id')->map(fn($id) => (string) $id)->toArray();
         $this->parentId = (string) ($user->parent_id ?? '');
-        $this->newPlanIds = [];
+        $this->newPlanId = '';
         $this->newPlanExpires = now()->addMonth()->format('Y-m-d');
         $this->showForm = true;
     }
@@ -53,33 +55,33 @@ new class extends Component {
     public function assignPlans(): void
     {
         $this->validate([
-            'newPlanIds'     => 'array|min:1',
+            'newPlanId'      => 'required|exists:subscription_plans,id',
             'newPlanExpires' => 'required|date|after:today',
         ]);
 
-        foreach ($this->newPlanIds as $planId) {
-            UserPlan::where('user_id', $this->editingId)
-                ->where('plan_id', $planId)
-                ->where('is_active', true)
-                ->update(['is_active' => false]);
+        // Bütün aktiv planları deaktiv et (model events üçün each ilə)
+        UserPlan::where('user_id', $this->editingId)
+            ->where('is_active', true)
+            ->get()
+            ->each(fn($up) => $up->update(['is_active' => false]));
 
-            UserPlan::create([
-                'user_id'     => $this->editingId,
-                'plan_id'     => $planId,
-                'starts_at'   => now(),
-                'expires_at'  => $this->newPlanExpires . ' 23:59:59',
-                'assigned_by' => auth()->id(),
-                'is_active'   => true,
-            ]);
-        }
+        UserPlan::create([
+            'user_id'     => $this->editingId,
+            'plan_id'     => $this->newPlanId,
+            'starts_at'   => now(),
+            'expires_at'  => $this->newPlanExpires . ' 23:59:59',
+            'assigned_by' => auth()->id(),
+            'is_active'   => true,
+        ]);
 
-        $this->reset(['newPlanIds', 'newPlanExpires']);
+        $this->newPlanId = '';
         $this->newPlanExpires = now()->addMonth()->format('Y-m-d');
     }
 
     public function revokePlan(int $userPlanId): void
     {
-        UserPlan::where('id', $userPlanId)->update(['is_active' => false]);
+        $up = UserPlan::find($userPlanId);
+        if ($up) $up->update(['is_active' => false]);
     }
 
     public function save(): void
@@ -111,8 +113,12 @@ new class extends Component {
 
         $user = User::updateOrCreate(['id' => $this->editingId], $data);
 
-        $roleNames = Role::whereIn('id', $this->selectedRoles)->pluck('name')->toArray();
-        $user->syncRoles($roleNames);
+        if (auth()->user()->hasRole('developer')) {
+            $roleNames = Role::whereIn('id', $this->selectedRoles)->pluck('name')->toArray();
+            $user->syncRoles($roleNames);
+        } elseif (!$this->editingId) {
+            $user->assignRole('əmlakçı');
+        }
 
         $this->showForm = false;
         $this->reset(['editingId', 'name', 'email', 'phone', 'password', 'selectedRoles', 'parentId']);
@@ -260,6 +266,7 @@ new class extends Component {
 
             <div>
                 <flux:heading size="sm" class="mb-1">Rollar</flux:heading>
+                @if(auth()->user()->hasRole('developer'))
                 @if(!empty($selectedRoles))
                 <div class="mb-2 flex flex-wrap gap-1">
                     @foreach($selectedRoles as $roleId)
@@ -273,7 +280,6 @@ new class extends Component {
                     @endforeach
                 </div>
                 @endif
-
                 <div x-data="{
                     open: false,
                     roles: {{ Js::from($roles->map(fn($r) => ['id' => (string)$r->id, 'name' => $r->name])) }},
@@ -311,6 +317,18 @@ new class extends Component {
                         </template>
                     </div>
                 </div>
+                @else
+                <div class="flex flex-wrap gap-1">
+                    @foreach($selectedRoles as $roleId)
+                        @php($role = $roles->firstWhere('id', $roleId))
+                        @if($role)
+                        <flux:badge size="sm" color="{{ $role->name === 'superadmin' ? 'red' : ($role->name === 'admin' ? 'amber' : 'blue') }}">
+                            {{ $role->name }}
+                        </flux:badge>
+                        @endif
+                    @endforeach
+                </div>
+                @endif
             </div>
 
             <div>
@@ -350,8 +368,8 @@ new class extends Component {
                     <div class="mb-2 flex flex-wrap gap-2">
                         @foreach($plans as $plan)
                         <label class="flex cursor-pointer items-center gap-1.5 text-sm">
-                            <input type="checkbox" value="{{ $plan->id }}" wire:model="newPlanIds"
-                                class="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500" />
+                            <input type="radio" value="{{ $plan->id }}" wire:model="newPlanId"
+                                class="border-zinc-300 text-indigo-600 focus:ring-indigo-500" />
                             <span class="text-zinc-700 dark:text-zinc-300">{{ $plan->name_az }}</span>
                             <span class="text-xs text-zinc-400">{{ number_format($plan->price, 0) }}₼</span>
                         </label>

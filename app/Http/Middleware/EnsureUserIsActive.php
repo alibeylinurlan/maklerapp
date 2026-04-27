@@ -16,7 +16,7 @@ class EnsureUserIsActive
             $request->session()->regenerateToken();
 
             return redirect()->route('login')->withErrors([
-                'email' => 'Hesabınız deaktiv edilmişdir.',
+                'email' => 'Hesabınız aktiv deyil.',
             ]);
         }
 
