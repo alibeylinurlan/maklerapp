@@ -144,10 +144,35 @@ function locationTree() {
         },
 
         init() {
-            // Build parent map from PHP data
             this.parentMap = {};
             LOCATIONS_DATA.forEach(l => {
                 this.parentMap[l.id] = l.parent_id;
+            });
+
+            this._scrollEl = document.querySelector('#location-tree')?.closest('.overflow-y-auto');
+            this._scrollRaf = null;
+
+            document.addEventListener('dragover', (e) => {
+                if (!this.dragging || !this._scrollEl) return;
+                const rect = this._scrollEl.getBoundingClientRect();
+                const zone = 80;
+                const y = e.clientY;
+                let speed = 0;
+                if (y < rect.top + zone)    speed = -((zone - (y - rect.top))  / zone) * 12;
+                else if (y > rect.bottom - zone) speed =  ((zone - (rect.bottom - y)) / zone) * 12;
+
+                cancelAnimationFrame(this._scrollRaf);
+                if (speed !== 0) {
+                    const scroll = () => {
+                        this._scrollEl.scrollTop += speed;
+                        this._scrollRaf = requestAnimationFrame(scroll);
+                    };
+                    this._scrollRaf = requestAnimationFrame(scroll);
+                }
+            });
+
+            document.addEventListener('dragend', () => {
+                cancelAnimationFrame(this._scrollRaf);
             });
         },
 

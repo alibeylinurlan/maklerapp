@@ -42,6 +42,15 @@ class Customer extends Model
         return $this->belongsTo(User::class);
     }
 
+    protected static function booted(): void
+    {
+        static::deleting(function (Customer $customer) {
+            $requestIds = $customer->requests()->pluck('id');
+            \App\Models\PropertyMatch::whereIn('customer_request_id', $requestIds)->delete();
+            $customer->requests()->delete();
+        });
+    }
+
     public function requests(): HasMany
     {
         return $this->hasMany(CustomerRequest::class);

@@ -102,7 +102,7 @@
                     :current="request()->routeIs('customers.*')"
                 >Müştərilərim <em class="text-[10px] font-normal text-zinc-400 italic">(alıcılar)</em></flux:navlist.item>
                 <flux:navlist.item
-                    icon="home"
+                    icon="user-group"
                     :icon:trailing="user_has_feature('customers') ? null : 'lock-closed'"
                     :href="route('sellers.index')"
                     :current="request()->routeIs('sellers.*')"

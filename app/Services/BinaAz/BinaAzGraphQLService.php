@@ -4,37 +4,11 @@ namespace App\Services\BinaAz;
 
 class BinaAzGraphQLService
 {
-    private const FEATURED_HASH = 'f34b27afebc725b2bb62b62f9757e1740beaf2dc162f4194e29ba5a608b3cb41';
-    private const SEARCH_HASH = '872e9c694c34b6674514d48e9dcf1b46241d3d79f365ddf20d138f18e74554c5';
+    private const SEARCH_QUERY = 'query SearchItems($first: Int, $cursor: String, $filter: ItemFilter, $sort: ItemConnectionSort!) { itemsConnection(first: $first, after: $cursor, filter: $filter, sort: $sort) { edges { node { id path price { value currency } rooms area { value } floor floors location { id name fullName } photos { thumbnail f460x345 } updatedAt hasMortgage hasRepair hasBillOfSale leased isBusiness vipped featured } } pageInfo { hasNextPage endCursor } } }';
 
     public function __construct(
         private BinaAzClient $client,
     ) {}
-
-    /**
-     * Əsas səhifədən elanları çək (offset-based pagination)
-     */
-    public function fetchFeatured(int $limit = 24, int $offset = 0): array
-    {
-        $data = $this->client->graphqlGet([
-            'operationName' => 'FeaturedItemsRow',
-            'variables' => json_encode(['limit' => $limit, 'offset' => $offset]),
-            'extensions' => json_encode([
-                'persistedQuery' => [
-                    'version' => 1,
-                    'sha256Hash' => self::FEATURED_HASH,
-                ],
-            ]),
-        ]);
-
-        $items = $data['data']['items'] ?? [];
-
-        return [
-            'items' => $items,
-            'hasMore' => count($items) === $limit,
-            'nextOffset' => $offset + $limit,
-        ];
-    }
 
     /**
      * Filtrli axtarış (cursor-based pagination)
@@ -49,12 +23,7 @@ class BinaAzGraphQLService
                 'sort' => 'BUMPED_AT_DESC',
                 'cursor' => $cursor,
             ],
-            'extensions' => [
-                'persistedQuery' => [
-                    'version' => 1,
-                    'sha256Hash' => self::SEARCH_HASH,
-                ],
-            ],
+            'query' => self::SEARCH_QUERY,
         ]);
 
         $connection = $data['data']['itemsConnection'] ?? [];

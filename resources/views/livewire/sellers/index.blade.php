@@ -170,6 +170,11 @@ new class extends Component {
 
     public function saveProperty(): void
     {
+        // Link var amma hələ scrape edilməyibsə — avtomatik scrape et
+        if ($this->pLink && !$this->pPrice && !$this->pTitle) {
+            $this->scrapeLink();
+        }
+
         $isBinaLink = $this->pLink && str_contains($this->pLink, 'bina.az');
 
         $prop = SellerProperty::updateOrCreate(

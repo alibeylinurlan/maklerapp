@@ -51,6 +51,19 @@
                 buraya at
             </span>
 
+            {{-- Unlink button (only for children) --}}
+            @if($depth > 0)
+            <button
+                type="button"
+                title="Əlaqəni kəs"
+                class="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity rounded p-0.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                @click.stop="parentMap[{{ $node->id }}] = null; $wire.setParent({{ $node->id }}, null).then(() => { $wire.$refresh(); showToast('✓ Əlaqə kəsildi'); })">
+                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                </svg>
+            </button>
+            @endif
+
             {{-- Drag handle dots --}}
             <svg class="size-3 shrink-0 text-zinc-200 dark:text-zinc-700 group-hover:text-zinc-400 transition-colors" fill="currentColor" viewBox="0 0 10 16">
                 <circle cx="3" cy="2" r="1.5"/><circle cx="7" cy="2" r="1.5"/>

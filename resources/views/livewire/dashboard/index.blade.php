@@ -45,6 +45,7 @@ new class extends Component {
 }; ?>
 
 <div>
+<div style="margin-right: 19rem;">
     <flux:heading size="xl">Giriş səhifəsi</flux:heading>
     <flux:subheading>Xoş gəldiniz, {{ auth()->user()->name }}</flux:subheading>
 
@@ -125,4 +126,13 @@ new class extends Component {
         </div>
     </div>
     @endif
+
+</div>
+
+{{-- Sağ: Canlı elanlar (fixed) --}}
+<div class="w-72 shrink-0 rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
+     style="background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 60%, #064e3b 100%);
+            position: fixed; top: 1rem; right: 1rem; bottom: 1rem;">
+    <x-live-feed />
+</div>
 </div>
