@@ -72,7 +72,7 @@
         <div class="flex items-center gap-2 px-2 py-3">
             <span class="logo-light text-xl leading-none text-zinc-900 tracking-tighter select-none eye-logo"><span class="eye-char">◉</span><span class="eye-char">◉</span></span>
             <span class="logo-dark text-xl leading-none text-white tracking-tighter select-none eye-logo"><span class="eye-char">◎</span><span class="eye-char">◎</span></span>
-            <a href="{{ route('dashboard') }}" class="text-lg font-bold text-zinc-800 dark:text-white">Binokl.az</a>
+            <a href="{{ route('properties.index') }}" class="text-lg font-bold text-zinc-800 dark:text-white">Binokl.az</a>
         </div>
 
         <flux:navlist variant="outline">

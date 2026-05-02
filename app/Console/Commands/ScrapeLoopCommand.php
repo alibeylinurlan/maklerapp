@@ -8,6 +8,7 @@ use App\Models\Property;
 use App\Services\BinaAz\BinaAzGraphQLService;
 use App\Services\BinaAz\BinaAzOwnerChecker;
 use App\Services\BinaAz\BinaAzPropertyParser;
+use App\Services\TeleskopNotifierService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
@@ -106,6 +107,7 @@ class ScrapeLoopCommand extends Command
                     $this->line("[YENİ] {$binaId} | {$property->price} {$property->currency} | {$property->rooms} otaq | {$property->location_full_name}");
                     $this->publishToSocket($property);
                     MatchNewPropertyJob::dispatch($property->id);
+                    app(TeleskopNotifierService::class)->notify($property);
                 } else {
                     Cache::put("not_owner:{$binaId}", true, 86400);
                 }
