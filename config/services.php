@@ -39,4 +39,8 @@ return [
         ],
     ],
 
+    'teleskop' => [
+        'api_key' => env('TELESKOP_API_KEY'),
+    ],
+
 ];
