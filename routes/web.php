@@ -10,7 +10,9 @@ Route::get('/api/listings/recent', function (\Illuminate\Http\Request $request) 
     }
     $query = \App\Models\Property::where('is_owner', true)->orderByDesc('bumped_at');
     if ($since = $request->query('since')) {
-        $query->where('bumped_at', '>', $since);
+        // since UTC kimi gəlir, DB Baku vaxtında saxlayır — çevir
+        $sinceLocal = \Carbon\Carbon::parse($since, 'UTC')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
+        $query->where('bumped_at', '>', $sinceLocal);
     } else {
         $query->limit(1);
     }
